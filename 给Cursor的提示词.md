@@ -254,14 +254,18 @@ One Euro 去抖），但这些改进**评审是看不见的**——他只会看�
 
 ---
 
-## Prompt 8 · 套 Claude Design 的视觉（先把导出物放进 design/）
+## Prompt 8 · 套 Claude Design 的视觉
 
-Claude Design 里 Share → Export → **Project HTML (.zip)** 解压到 `design/html/`，
-每块画板再导一张 PNG 放到 `design/png/`（文件名用画板名）。**不要点「Claude Code · Send」。**
+Claude Design 导出的 **Project HTML** 里有一个 `笑雨烟花 AR Demo.dc.html`——20 块画板全在这一个文件里
+（`id="S1-a"` … `"S4-b"`、`"D-1"`…`"D-3"` 桌面、`"C-1"` 组件表），每块都是完整的 HTML + 内联 CSS。
+把它放到 `~/笑雨烟花/design/` 下就行，**不需要截图**，Cursor 直接读源码比看图准。
 
 ```
-把 design/ 里 Claude Design 出的视觉套到现有 UI 上。design/html 是它导出的页面源码，
-design/png 是每块画板的效果图；以 PNG 为准，html 只用来抄颜色、字号、间距、圆角的具体数值。
+design/笑雨烟花 AR Demo.dc.html 是 Claude Design 出的高保真界面，20 块画板全在里面，
+每块是一个 id 为 S1-a / S1-b … S2-1 … S3-a / S4-a / S4-b / D-1 … D-3 / C-1 的 div，
+里面是完整的 HTML 和内联样式。忽略文件头的 support.js 和画板外的说明文字。
+先把 C-1（组件表）和 S2-1 读完，列出它用的颜色 / 字号 / 圆角 / 间距 / 阴影，
+和 src/style.css 顶部 :root 里现有的变量对照，告诉我哪些要新增，我确认后再动手。
 
 范围（只许改这五个文件）：src/style.css、src/hud.ts、src/drawer.ts、src/copy.ts、index.html。
 不许碰 main.ts / particles.ts / face.ts / state.ts / segment*.ts / view.ts。
@@ -275,14 +279,18 @@ design/png 是每块画板的效果图；以 PNG 为准，html 只用来抄颜�
 - style.css 顶部的 [hidden] { display:none !important } 规则和 :root 里的 CSS 变量名
 - #cam #rain #camFront #fx 四层的层级顺序和定位
 - .drawer-sheet 用 transform 做滑入滑出，手机把手拖拽依赖它
+- 画板里的粒子、人形剪影、示意用的摄像头画面都是效果示意，不要搬进代码——那些由 canvas 实时画
 
-做法：按画板逐个套，一块画板一个 commit（S1 开始页 → S2 主画面 → S3 手动模式 → S4 设置面板 → 组件表）。
-每个 commit 前跑 npx tsc --noEmit。颜色只用 :root 里已有的变量，画板里出现的新值就加成新变量，
-不要在规则里写死十六进制。文案改动全部进 copy.ts。
+对应关系：S1-a…e → 开始页五态（startBtn 的 data-state）；S2-1…7 → 主画面各状态；
+S3-a/b → 手动模式；S4-a/b → 设置面板基础 / 高级；D-1…3 → 桌面 1440 宽的差异；C-1 → 组件样式。
 
-做完给我：改动文件列表、每块画板和 PNG 还有哪些对不上、你不确定的地方。
-不要顺手「优化」任何逻辑。
+做法：按画板逐个套，一组画板一个 commit（S1 → S2 → S3 → S4 → D）。
+每个 commit 前跑 npx tsc --noEmit。颜色只用 :root 变量，画板里的新值加成新变量，
+规则里不要写死十六进制。文案改动全部进 copy.ts。
+
+做完给我：改动文件列表、哪些地方和画板对不上、你不确定的地方。不要顺手「优化」任何逻辑。
 ```
 
 它最可能犯的错：把 `hidden` 属性换成 `display:none` 的 class（开始页四态会失效）、
-给退出加确认弹窗、改掉 `.drawer-sheet` 的 transform。碰到就回它「回退，CLAUDE.md 屏幕分层那节」。
+给退出加确认弹窗、改掉 `.drawer-sheet` 的 transform、把画板里示意用的粒子 / 剪影当成要实现的 UI。
+碰到就回它「回退，CLAUDE.md 屏幕分层那节」。

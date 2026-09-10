@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+html,body{margin:0;padding:0;background:#0B0908;color:#F5EDE6;font-family:"PingFang SC","Noto Sans SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#F0785A;text-decoration:none}
+a:hover{color:#E9B95A}
+@keyframes spin{to{transform:rotate(360deg)}}
+[data-noscrollbar]{scrollbar-width:none;-ms-overflow-style:none}
+[data-noscrollbar]::-webkit-scrollbar{width:0;height:0;display:none}
+</style>
+</helmet>
+<div style="padding:56px 56px 120px;background:#0B0908;min-width:1780px">
+
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:48px;padding-bottom:28px;border-bottom:1px solid rgba(245,237,230,0.14)">
+    <div>
+      <div style="font-size:12px;letter-spacing:.22em;color:#F0785A">LIVE DEMO · 高保真界面</div>
+      <h1 style="margin:10px 0 0;font-size:38px;font-weight:600;letter-spacing:.02em;color:#F5EDE6">笑雨烟花</h1>
+      <p style="margin:10px 0 0;max-width:560px;font-size:14px;line-height:1.8;color:#A4948A">微笑下雨，大笑放烟花。手机 390×844 为主、桌面 1440×900 为辅，共 20 块画板。粒子为真实动效示意，可在 Tweaks 里冻结与调密度。</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;gap:8px">
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><div style="width:34px;height:34px;border-radius:8px;background:#F5EDE6"></div><span style="font-size:10px;color:#A4948A">F5EDE6</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><div style="width:34px;height:34px;border-radius:8px;background:#A4948A"></div><span style="font-size:10px;color:#A4948A">A4948A</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><div style="width:34px;height:34px;border-radius:8px;background:#1E1815;border:1px solid rgba(245,237,230,0.14)"></div><span style="font-size:10px;color:#A4948A">1E1815</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><div style="width:34px;height:34px;border-radius:8px;background:#F0785A"></div><span style="font-size:10px;color:#A4948A">F0785A</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><div style="width:34px;height:34px;border-radius:8px;background:#E9B95A"></div><span style="font-size:10px;color:#A4948A">E9B95A</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><div style="width:34px;height:34px;border-radius:8px;background:#BFD4F2"></div><span style="font-size:10px;color:#A4948A">BFD4F2</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><div style="width:34px;height:34px;border-radius:8px;background:#6FC3B8"></div><span style="font-size:10px;color:#A4948A">6FC3B8</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:20px;margin:56px 0 24px">
+    <h2 style="margin:0;font-size:20px;font-weight:600;letter-spacing:.04em;color:#F5EDE6">S1 开始页 · 390×844</h2>
+    <div style="flex:1;height:1px;background:rgba(245,237,230,0.14)"></div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:48px">
+
+    <div id="S1-a" data-screen-label="S1-a" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:12px;letter-spacing:.1em;color:#F0785A">S1-a</span><span style="font-size:13px;color:#A4948A">默认 · 无预览槽位</span></div>
+      <div style="position:relative;width:390px;height:844px;border-radius:28px;overflow:hidden;border:1px solid rgba(245,237,230,0.14)">
+        <dc-import name="Scene" mode="gradient" w="390" h="844" seed="3" density="{{ rainDensity }}" animate="{{ animate }}" face-zone="{{ faceZone }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 44px;text-align:center">
+          <h3 style="margin:0;font-size:30px;font-weight:600;line-height:1.35;letter-spacing:.02em;color:#F5EDE6">笑一下，屏幕会开花</h3>
+          <p style="margin:14px 0 0;max-width:276px;font-size:14px;line-height:1.8;color:#A4948A">微笑会下雨，大笑会放烟花。</p>
+          <div style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:52px;margin-top:34px;border-radius:999px;background:linear-gradient(135deg,#F0785A 0%,#E9B95A 100%);color:#1B120E;font-size:16px;font-weight:600;letter-spacing:.04em">开始</div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:74px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:11px;letter-spacing:.02em;color:#A4948A"><span style="width:4px;height:4px;border-radius:999px;background:#E9B95A;flex:none"></span>需要打开摄像头</div>
+        <div style="position:absolute;left:0;right:0;bottom:46px;text-align:center;font-size:11px;letter-spacing:.02em;color:#A4948A">Live Demo · 画面只在本机处理，不会上传</div>
+      </div>
+    </div>
+
+    <div id="S1-b" data-screen-label="S1-b" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:12px;letter-spacing:.1em;color:#F0785A">S1-b</span><span style="font-size:13px;color:#A4948A">默认 · 有预览槽位</span></div>
+      <div style="position:relative;width:390px;height:844px;border-radius:28px;overflow:hidden;border:1px solid rgba(245,237,230,0.14)">
+        <dc-import name="Scene" mode="gradient" w="390" h="844" seed="3" density="{{ rainDensity }}" animate="{{ animate }}" face-zone="{{ faceZone }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 44px;text-align:center">
+          <div style="position:relative;width:161px;height:287px;border-radius:18px;overflow:hidden;background:#1E1815;border:1px solid rgba(245,237,230,0.14);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px">
+            <div style="position:absolute;inset:0;background:radial-gradient(80% 50% at 50% 40%, rgba(240,120,90,0.14), rgba(0,0,0,0) 70%)"></div>
+            <div style="position:relative;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:999px;background:rgba(20,16,15,0.6);border:1px solid rgba(245,237,230,0.14)">
+              <div style="width:0;height:0;margin-left:3px;border-left:11px solid #F5EDE6;border-top:7px solid transparent;border-bottom:7px solid transparent"></div>
+            </div>
+            <span style="position:relative;font-size:11px;color:#A4948A">玩法预览 · 9:16</span>
+          </div>
+          <h3 style="margin:26px 0 0;font-size:28px;font-weight:600;line-height:1.35;letter-spacing:.02em;color:#F5EDE6">笑一下，屏幕会开花</h3>
+          <p style="margin:12px 0 0;max-width:276px;font-size:14px;line-height:1.8;color:#A4948A">微笑会下雨，大笑会放烟花。</p>
+          <div style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:52px;margin-top:26px;border-radius:999px;background:linear-gradient(135deg,#F0785A 0%,#E9B95A 100%);color:#1B120E;font-size:16px;font-weight:600;letter-spacing:.04em">开始</div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:74px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:11px;letter-spacing:.02em;color:#A4948A"><span style="width:4px;height:4px;border-radius:999px;background:#E9B95A;flex:none"></span>需要打开摄像头</div>
+        <div style="position:absolute;left:0;right:0;bottom:46px;text-align:center;font-size:11px;letter-spacing:.02em;color:#A4948A">Live Demo · 画面只在本机处理，不会上传</div>
+      </div>
+    </div>
+
+    <div id="S1-c" data-screen-label="S1-c" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:12px;letter-spacing:.1em;color:#F0785A">S1-c</span><span style="font-size:13px;color:#A4948A">请求摄像头权限中 · 按钮禁用</span></div>
+      <div style="position:relative;width:390px;height:844px;border-radius:28px;overflow:hidden;border:1px solid rgba(245,237,230,0.14)">
+        <dc-import name="Scene" mode="gradient" w="390" h="844" seed="3" density="{{ rainDensity }}" animate="{{ animate }}" face-zone="{{ faceZone }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 44px;text-align:center">
+          <h3 style="margin:0;font-size:30px;font-weight:600;line-height:1.35;letter-spacing:.02em;color:#F5EDE6">笑一下，屏幕会开花</h3>
+          <p style="margin:14px 0 0;max-width:276px;font-size:14px;line-height:1.8;color:#A4948A">微笑会下雨，大笑会放烟花。</p>
+          <div style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:52px;margin-top:34px;border-radius:999px;background:linear-gradient(135deg,#F0785A 0%,#E9B95A 100%);color:#1B120E;font-size:16px;font-weight:600;letter-spacing:.04em;opacity:.55">
+            <div style="width:16px;height:16px;border-radius:999px;border:2px solid rgba(27,18,14,0.3);border-top-color:#1B120E;animation:spin .8s linear infinite"></div>
+            <span>正在打开摄像头</span>
+          </div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:74px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:11px;letter-spacing:.02em;color:#A4948A"><span style="width:4px;height:4px;border-radius:999px;background:#E9B95A;flex:none"></span>需要打开摄像头</div>
+        <div style="position:absolute;left:0;right:0;bottom:46px;text-align:center;font-size:11px;letter-spacing:.02em;color:#A4948A">Live Demo · 画面只在本机处理，不会上传</div>
+      </div>
+    </div>
+
+    <div id="S1-d" data-screen-label="S1-d" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:12px;letter-spacing:.1em;color:#F0785A">S1-d</span><span style="font-size:13px;color:#A4948A">加载识别模型中</span></div>
+      <div style="position:relative;width:390px;height:844px;border-radius:28px;overflow:hidden;border:1px solid rgba(245,237,230,0.14)">
+        <dc-import name="Scene" mode="gradient" w="390" h="844" seed="3" density="{{ rainDensity }}" animate="{{ animate }}" face-zone="{{ faceZone }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 44px;text-align:center">
+          <h3 style="margin:0;font-size:30px;font-weight:600;line-height:1.35;letter-spacing:.02em;color:#F5EDE6">笑一下，屏幕会开花</h3>
+          <p style="margin:14px 0 0;max-width:276px;font-size:14px;line-height:1.8;color:#A4948A">微笑会下雨，大笑会放烟花。</p>
+          <div style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:52px;margin-top:34px;border-radius:999px;background:linear-gradient(135deg,#F0785A 0%,#E9B95A 100%);color:#1B120E;font-size:16px;font-weight:600;letter-spacing:.04em;opacity:.55">
+            <div style="width:16px;height:16px;border-radius:999px;border:2px solid rgba(27,18,14,0.3);border-top-color:#1B120E;animation:spin .8s linear infinite"></div>
+            <span>正在准备</span>
+          </div>
+          <div style="margin-top:14px;font-size:12px;color:#A4948A;font-variant-numeric:tabular-nums">正在加载识别模型 63%</div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:74px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:11px;letter-spacing:.02em;color:#A4948A"><span style="width:4px;height:4px;border-radius:999px;background:#E9B95A;flex:none"></span>需要打开摄像头</div>
+        <div style="position:absolute;left:0;right:0;bottom:46px;text-align:center;font-size:11px;letter-spacing:.02em;color:#A4948A">Live Demo · 画面只在本机处理，不会上传</div>
+      </div>
+    </div>
+
+    <div id="S1-e" data-screen-label="S1-e" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:12px;letter-spacing:.1em;color:#F0785A">S1-e</span><span style="font-size:13px;color:#A4948A">摄像头未开启 · 拒绝 / 超时 / 不支持</span></div>
+      <div style="position:relative;width:390px;height:844px;border-radius:28px;overflow:hidden;border:1px solid rgba(245,237,230,0.14)">
+        <dc-import name="Scene" mode="gradient" w="390" h="844" seed="3" density="{{ rainDensity }}" animate="{{ animate }}" face-zone="{{ faceZone }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 40px;text-align:center">
+          <h3 style="margin:0;font-size:30px;font-weight:600;line-height:1.35;letter-spacing:.02em;color:#F5EDE6">笑一下，屏幕会开花</h3>
+          <p style="margin:14px 0 0;max-width:276px;font-size:14px;line-height:1.8;color:#A4948A">微笑会下雨，大笑会放烟花。</p>
+          <div style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:52px;margin-top:34px;border-radius:999px;background:linear-gradient(135deg,#F0785A 0%,#E9B95A 100%);color:#1B120E;font-size:16px;font-weight:600;letter-spacing:.04em">摄像头未开启，直接开始</div>
+          <p style="margin:18px 0 0;max-width:300px;font-size:12px;line-height:1.9;color:#A4948A">点地址栏左边的「ᴀA」→ 网站设置 → 摄像头 → 允许</p>
+          <a href="#S1-e" style="margin-top:10px;font-size:13px;color:#F0785A;text-decoration:underline;text-underline-offset:4px">重试摄像头</a>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:74px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:11px;letter-spacing:.02em;color:#A4948A"><span style="width:4px;height:4px;border-radius:999px;background:#E9B95A;flex:none"></span>需要打开摄像头</div>
+        <div style="position:absolute;left:0;right:0;bottom:46px;text-align:center;font-size:11px;letter-spacing:.02em;color:#A4948A">Live Demo · 画面只在本机处理，不会上传</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="display:flex;align-items:center;gap:20px;margin:64px 0 24px">
+    <h2 style="margin:0;font-size:20px;font-weight:600;letter-spacing:.04em;color:#F5EDE6">S2 主画面 · 摄像头模式 · 390×844</h2>
+    <div style="flex:1;height:1px;background:rgba(245,237,230,0.14)"></div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:48px">
+
+    <div id="S2-1" data-screen-label="S2-1" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:12px;letter-spacing:.1em;color:#F0785A">S2-1</span><span style="font-size:13px;color:#A4948A">Idle · 无粒子</span></div>
+      <div style="position:relative;width:390px;height:844px;border-radius:28px;overflow:hidden;border:1px solid rgba(245,237,230,0.14)">
+        <dc-import name="Scene" mode="camera" w="390" h="844" seed="11" density="{{ rainDensity }}" animate="{{ animate }}" face-zone="{{ faceZone }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+        <div style="position:absolute;top:54px;right:16px;display:flex;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.6 9s2.8-5.2 7.4-5.2S16.4 9 16.4 9s-2.8 5.2-7.4 5.2S1.6 9 1.6 9Z"></path><circle cx="9" cy="9" r="2.2"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.6 4.6h12.8M2.6 9h12.8M2.6 13.4h12.8"></path><circle cx="6.4" cy="4.6" r="1.8" fill="#191311"></circle><circle cx="11.4" cy="9" r="1.8" fill="#191311"></circle><circle cx="5.6" cy="13.4" r="1.8" fill="#191311"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4.8 4.8l8.4 8.4M13.2 4.8l-8.4 8.4"></path></svg></div>
+        </div>
+        <div style="position:absolute;top:104px;left:50%;transform:translateX(-50%);display:flex;align-items:center;height:34px;padding:0 14px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);font-size:12px;letter-spacing:.02em;color:#F5EDE6;white-space:nowrap">把脸放进画面里</div>
+        <div style="position:absolute;left:0;right:0;bottom:58px;display:flex;flex-direction:column;align-items:center;gap:14px">
+          <div style="font-size:13px;letter-spacing:.02em;color:#F5EDE6">对着镜头微笑，雨就会落下来</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:8px"><span style="width:26px;text-align:right;font-size:11px;color:#A4948A">微笑</span><div style="width:160px;height:3px;border-radius:999px;background:rgba(245,237,230,0.14);overflow:hidden"><div style="width:0%;height:100%;border-radius:999px;background:#BFD4F2"></div></div></div>
+            <div style="display:flex;align-items:center;gap:8px"><span style="width:26px;text-align:right;font-size:11px;color:#A4948A">大笑</span><div style="width:160px;height:3px;border-radius:999px;background:rgba(245,237,230,0.14);overflow:hidden"><div style="width:0%;height:100%;border-radius:999px;background:#F0785A"></div></div></div>
+          </div>
+        </div>
+        <div style="position:absolute;right:16px;bottom:58px;display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12.6V3.4"></path><path d="M6.6 6.6L10 3.2l3.4 3.4"></path><path d="M4.4 11.4v3.4a1.8 1.8 0 0 0 1.8 1.8h7.6a1.8 1.8 0 0 0 1.8-1.8v-3.4"></path></svg></div>
+      </div>
+    </div>
+
+    <div id="S2-2" data-screen-label="S2-2" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:12px;letter-spacing:.1em;color:#F0785A">S2-2</span><span style="font-size:13px;color:#A4948A">Smiling · 三层雨</span></div>
+      <div style="position:relative;width:390px;height:844px;border-radius:28px;overflow:hidden;border:1px solid rgba(245,237,230,0.14)">
+        <dc-import name="Scene" mode="camera" rain="1" w="390" h="844" seed="21" density="{{ rainDensity }}" animate="{{ animate }}" face-zone="{{ faceZone }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+        <div style="position:absolute;top:54px;right:16px;display:flex;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.6 9s2.8-5.2 7.4-5.2S16.4 9 16.4 9s-2.8 5.2-7.4 5.2S1.6 9 1.6 9Z"></path><circle cx="9" cy="9" r="2.2"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.6 4.6h12.8M2.6 9h12.8M2.6 13.4h12.8"></path><circle cx="6.4" cy="4.6" r="1.8" fill="#191311"></circle><circle cx="11.4" cy="9" r="1.8" fill="#191311"></circle><circle cx="5.6" cy="13.4" r="1.8" fill="#191311"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4.8 4.8l8.4 8.4M13.2 4.8l-8.4 8.4"></path></svg></div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:58px;display:flex;flex-direction:column;align-items:center;gap:14px">
+          <div style="font-size:13px;letter-spacing:.02em;color:#F5EDE6">再张开嘴大笑试试</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:8px"><span style="width:26px;text-align:right;font-size:11px;color:#A4948A">微笑</span><div style="width:160px;height:3px;border-radius:999px;background:rgba(245,237,230,0.14);overflow:hidden"><div style="width:100%;height:100%;border-radius:999px;background:#BFD4F2"></div></div></div>
+            <div style="display:flex;align-items:center;gap:8px"><span style="width:26px;text-align:right;font-size:11px;color:#A4948A">大笑</span><div style="width:160px;height:3px;border-radius:999px;background:rgba(245,237,230,0.14);overflow:hidden"><div style="width:34%;height:100%;border-radius:999px;background:#F0785A"></div></div></div>
+          </div>
+        </div>
+        <div style="position:absolute;right:16px;bottom:58px;display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12.6V3.4"></path><path d="M6.6 6.6L10 3.2l3.4 3.4"></path><path d="M4.4 11.4v3.4a1.8 1.8 0 0 0 1.8 1.8h7.6a1.8 1.8 0 0 0 1.8-1.8v-3.4"></path></svg></div>
+      </div>
+    </div>
+
+    <div id="S2-3" data-screen-label="S2-3" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:12px;letter-spacing:.1em;color:#F0785A">S2-3</span><span style="font-size:13px;color:#A4948A">Laughing · 雨已淡出，只剩烟花 + 头顶溅开</span></div>
+      <div style="position:relative;width:390px;height:844px;border-radius:28px;overflow:hidden;border:1px solid rgba(245,237,230,0.14)">
+        <dc-import name="Scene" mode="camera" fireworks="burst" splash="1" w="390" h="844" seed="31" density="{{ rainDensity }}" animate="{{ animate }}" face-zone="{{ faceZone }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+        <div style="position:absolute;top:54px;right:16px;display:flex;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.6 9s2.8-5.2 7.4-5.2S16.4 9 16.4 9s-2.8 5.2-7.4 5.2S1.6 9 1.6 9Z"></path><circle cx="9" cy="9" r="2.2"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.6 4.6h12.8M2.6 9h12.8M2.6 13.4h12.8"></path><circle cx="6.4" cy="4.6" r="1.8" fill="#191311"></circle><circle cx="11.4" cy="9" r="1.8" fill="#191311"></circle><circle cx="5.6" cy="13.4" r="1.8" fill="#191311"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4.8 4.8l8.4 8.4M13.2 4.8l-8.4 8.4"></path></svg></div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:58px;display:flex;flex-direction:column;align-items:center;gap:14px">
+          <div style="font-size:13px;letter-spacing:.02em;color:#F5EDE6">摆摆头，让烟花撞到你</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:8px"><span style="width:26px;text-align:right;font-size:11px;color:#A4948A">微笑</span><div style="width:160px;height:3px;border-radius:999px;background:rgba(245,237,230,0.14);overflow:hidden"><div style="width:100%;height:100%;border-radius:999px;background:#BFD4F2"></div></div></div>
+            <div style="display:flex;align-items:center;gap:8px"><span style="width:26px;text-align:right;font-size:11px;color:#A4948A">大笑</span><div style="width:160px;height:3px;border-radius:999px;background:rgba(245,237,230,0.14);overflow:hidden"><div style="width:100%;height:100%;border-radius:999px;background:#F0785A"></div></div></div>
+          </div>
+        </div>
+        <div style="position:absolute;right:16px;bottom:58px;display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12.6V3.4"></path><path d="M6.6 6.6L10 3.2l3.4 3.4"></path><path d="M4.4 11.4v3.4a1.8 1.8 0 0 0 1.8 1.8h7.6a1.8 1.8 0 0 0 1.8-1.8v-3.4"></path></svg></div>
+      </div>
+    </div>
+
+    <div id="S2-4" data-screen-label="S2-4" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:12px;letter-spacing:.1em;color:#F0785A">S2-4</span><span style="font-size:13px;color:#A4948A">引导走完 · 文字淡出，两根条常驻</span></div>
+      <div style="position:relative;width:390px;height:844px;border-radius:28px;overflow:hidden;border:1px solid rgba(245,237,230,0.14)">
+        <dc-import name="Scene" mode="camera" rain="1" w="390" h="844" seed="41" density="{{ rainDensity }}" animate="{{ animate }}" face-zone="{{ faceZone }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+        <div style="position:absolute;top:54px;right:16px;display:flex;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.6 9s2.8-5.2 7.4-5.2S16.4 9 16.4 9s-2.8 5.2-7.4 5.2S1.6 9 1.6 9Z"></path><circle cx="9" cy="9" r="2.2"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.6 4.6h12.8M2.6 9h12.8M2.6 13.4h12.8"></path><circle cx="6.4" cy="4.6" r="1.8" fill="#191311"></circle><circle cx="11.4" cy="9" r="1.8" fill="#191311"></circle><circle cx="5.6" cy="13.4" r="1.8" fill="#191311"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4.8 4.8l8.4 8.4M13.2 4.8l-8.4 8.4"></path></svg></div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:58px;display:flex;flex-direction:column;align-items:center;gap:10px">
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:26px;text-align:right;font-size:11px;color:#A4948A">微笑</span><div style="width:160px;height:3px;border-radius:999px;background:rgba(245,237,230,0.14);overflow:hidden"><div style="width:82%;height:100%;border-radius:999px;background:#BFD4F2"></div></div></div>
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:26px;text-align:right;font-size:11px;color:#A4948A">大笑</span><div style="width:160px;height:3px;border-radius:999px;background:rgba(245,237,230,0.14);overflow:hidden"><div style="width:18%;height:100%;border-radius:999px;background:#F0785A"></div></div></div>
+        </div>
+        <div style="position:absolute;right:16px;bottom:58px;display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12.6V3.4"></path><path d="M6.6 6.6L10 3.2l3.4 3.4"></path><path d="M4.4 11.4v3.4a1.8 1.8 0 0 0 1.8 1.8h7.6a1.8 1.8 0 0 0 1.8-1.8v-3.4"></path></svg></div>
+      </div>
+    </div>
+
+    <div id="S2-5" data-screen-label="S2-5" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:12px;letter-spacing:.1em;color:#F0785A">S2-5</span><span style="font-size:13px;color:#A4948A">隐藏 UI · 原位留一颗 24px / 30% 圆点</span></div>
+      <div style="position:relative;width:390px;height:844px;border-radius:28px;overflow:hidden;border:1px solid rgba(245,237,230,0.14)">
+        <dc-import name="Scene" mode="camera" rain="1" w="390" h="844" seed="51" density="{{ rainDensity }}" animate="{{ animate }}" face-zone="{{ faceZone }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+        <div style="position:absolute;top:54px;right:16px;display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.6 9s2.8-5.2 7.4-5.2S16.4 9 16.4 9s-2.8 5.2-7.4 5.2S1.6 9 1.6 9Z"></path><circle cx="9" cy="9" r="2.2"></circle><path d="M3.2 14.8L14.8 3.2"></path></svg></div>
+      </div>
+    </div>
+
+    <div id="S2-6" data-screen-label="S2-6" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:12px;letter-spacing:.1em;color:#F0785A">S2-6</span><span style="font-size:13px;color:#A4948A">分享成功 toast</span></div>
+      <div style="position:relative;width:390px;height:844px;border-radius:28px;overflow:hidden;border:1px solid rgba(245,237,230,0.14)">
+        <dc-import name="Scene" mode="camera" rain="1" w="390" h="844" seed="61" density="{{ rainDensity }}" animate="{{ animate }}" face-zone="{{ faceZone }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+        <div style="position:absolute;top:54px;right:16px;display:flex;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.6 9s2.8-5.2 7.4-5.2S16.4 9 16.4 9s-2.8 5.2-7.4 5.2S1.6 9 1.6 9Z"></path><circle cx="9" cy="9" r="2.2"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.6 4.6h12.8M2.6 9h12.8M2.6 13.4h12.8"></path><circle cx="6.4" cy="4.6" r="1.8" fill="#191311"></circle><circle cx="11.4" cy="9" r="1.8" fill="#191311"></circle><circle cx="5.6" cy="13.4" r="1.8" fill="#191311"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4.8 4.8l8.4 8.4M13.2 4.8l-8.4 8.4"></path></svg></div>
+        </div>
+        <div style="position:absolute;left:50%;bottom:120px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;height:36px;padding:0 16px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(245,237,230,0.14);font-size:13px;color:#F5EDE6;white-space:nowrap">
+          <svg width="14" height="14" fill="none" stroke="#E9B95A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.4 7.4l3 3 6.2-6.4"></path></svg>
+          <span>截图已保存</span>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:58px;display:flex;flex-direction:column;align-items:center;gap:10px">
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:26px;text-align:right;font-size:11px;color:#A4948A">微笑</span><div style="width:160px;height:3px;border-radius:999px;background:rgba(245,237,230,0.14);overflow:hidden"><div style="width:74%;height:100%;border-radius:999px;background:#BFD4F2"></div></div></div>
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:26px;text-align:right;font-size:11px;color:#A4948A">大笑</span><div style="width:160px;height:3px;border-radius:999px;background:rgba(245,237,230,0.14);overflow:hidden"><div style="width:22%;height:100%;border-radius:999px;background:#F0785A"></div></div></div>
+        </div>
+        <div style="position:absolute;right:16px;bottom:58px;display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:999px;background:rgba(245,237,230,0.10);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.24);color:#F5EDE6"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12.6V3.4"></path><path d="M6.6 6.6L10 3.2l3.4 3.4"></path><path d="M4.4 11.4v3.4a1.8 1.8 0 0 0 1.8 1.8h7.6a1.8 1.8 0 0 0 1.8-1.8v-3.4"></path></svg></div>
+      </div>
+    </div>
+
+    <div id="S2-7" data-screen-label="S2-7" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:12px;letter-spacing:.1em;color:#F0785A">S2-7</span><span style="font-size:13px;color:#A4948A">空闲暂停 · 72% 遮罩 + 模糊</span></div>
+      <div style="position:relative;width:390px;height:844px;border-radius:28px;overflow:hidden;border:1px solid rgba(245,237,230,0.14)">
+        <dc-import name="Scene" mode="camera" w="390" h="844" seed="71" density="{{ rainDensity }}" animate="{{ animate }}" face-zone="{{ faceZone }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+        <div style="position:absolute;top:54px;right:16px;display:flex;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.6 9s2.8-5.2 7.4-5.2S16.4 9 16.4 9s-2.8 5.2-7.4 5.2S1.6 9 1.6 9Z"></path><circle cx="9" cy="9" r="2.2"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.6 4.6h12.8M2.6 9h12.8M2.6 13.4h12.8"></path><circle cx="6.4" cy="4.6" r="1.8" fill="#191311"></circle><circle cx="11.4" cy="9" r="1.8" fill="#191311"></circle><circle cx="5.6" cy="13.4" r="1.8" fill="#191311"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4.8 4.8l8.4 8.4M13.2 4.8l-8.4 8.4"></path></svg></div>
+        </div>
+        <div style="position:absolute;inset:0;background:rgba(20,16,15,0.72);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)"></div>
+        <div style="position:absolute;left:0;right:0;bottom:74px;display:flex;flex-direction:column;align-items:center;gap:10px">
+          <div style="font-size:16px;letter-spacing:.02em;color:#F5EDE6">一直没看到人，已经暂停了</div>
+          <div style="font-size:13px;color:#A4948A">点一下继续</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="display:flex;align-items:center;gap:20px;margin:64px 0 24px">
+    <h2 style="margin:0;font-size:20px;font-weight:600;letter-spacing:.04em;color:#F5EDE6">S3 手动模式 · S4 设置 · 390×844</h2>
+    <div style="flex:1;height:1px;background:rgba(245,237,230,0.14)"></div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:48px">
+
+    <div id="S3-a" data-screen-label="S3-a" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:12px;letter-spacing:.1em;color:#F0785A">S3-a</span><span style="font-size:13px;color:#A4948A">手动模式 · 静止</span></div>
+      <div style="position:relative;width:390px;height:844px;border-radius:28px;overflow:hidden;border:1px solid rgba(245,237,230,0.14)">
+        <dc-import name="Scene" mode="gradient" rain="1" w="390" h="844" seed="81" density="{{ rainDensity }}" animate="{{ animate }}" face-zone="{{ faceZone }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+        <div style="position:absolute;top:54px;right:16px;display:flex;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.6 9s2.8-5.2 7.4-5.2S16.4 9 16.4 9s-2.8 5.2-7.4 5.2S1.6 9 1.6 9Z"></path><circle cx="9" cy="9" r="2.2"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.6 4.6h12.8M2.6 9h12.8M2.6 13.4h12.8"></path><circle cx="6.4" cy="4.6" r="1.8" fill="#191311"></circle><circle cx="11.4" cy="9" r="1.8" fill="#191311"></circle><circle cx="5.6" cy="13.4" r="1.8" fill="#191311"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4.8 4.8l8.4 8.4M13.2 4.8l-8.4 8.4"></path></svg></div>
+        </div>
+        <div style="position:absolute;top:57px;left:16px;display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(245,237,230,0.14)">
+          <span style="width:5px;height:5px;border-radius:999px;background:#E9B95A;flex:none"></span>
+          <span style="font-size:11px;color:#F5EDE6;white-space:nowrap">手动模式</span>
+          <span style="width:1px;height:12px;background:rgba(245,237,230,0.14);flex:none"></span>
+          <span style="font-size:11px;color:#F0785A;white-space:nowrap">重连摄像头</span>
+          <svg width="13" height="13" fill="none" stroke="#F0785A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.8 6.5a4.7 4.7 0 1 0 1.5-3.4"></path><path d="M1.6 2v3h3"></path></svg>
+        </div>
+        <div style="position:absolute;right:16px;bottom:54px;display:flex;align-items:center;gap:12px">
+          <span style="font-size:11px;color:#A4948A;white-space:nowrap">点一下下雨 · 长按放烟花</span>
+          <div style="position:relative;display:flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:999px;background:rgba(240,120,90,0.16);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(240,120,90,0.55)">
+            <div style="width:18px;height:18px;border-radius:999px;background:linear-gradient(135deg,#F0785A 0%,#E9B95A 100%)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="S3-b" data-screen-label="S3-b" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:12px;letter-spacing:.1em;color:#F0785A">S3-b</span><span style="font-size:13px;color:#A4948A">手动模式 · 长按中（环形进度 2/3）</span></div>
+      <div style="position:relative;width:390px;height:844px;border-radius:28px;overflow:hidden;border:1px solid rgba(245,237,230,0.14)">
+        <dc-import name="Scene" mode="gradient" fireworks="rising" w="390" h="844" seed="91" density="{{ rainDensity }}" animate="{{ animate }}" face-zone="{{ faceZone }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+        <div style="position:absolute;top:54px;right:16px;display:flex;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.6 9s2.8-5.2 7.4-5.2S16.4 9 16.4 9s-2.8 5.2-7.4 5.2S1.6 9 1.6 9Z"></path><circle cx="9" cy="9" r="2.2"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.6 4.6h12.8M2.6 9h12.8M2.6 13.4h12.8"></path><circle cx="6.4" cy="4.6" r="1.8" fill="#191311"></circle><circle cx="11.4" cy="9" r="1.8" fill="#191311"></circle><circle cx="5.6" cy="13.4" r="1.8" fill="#191311"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4.8 4.8l8.4 8.4M13.2 4.8l-8.4 8.4"></path></svg></div>
+        </div>
+        <div style="position:absolute;top:57px;left:16px;display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(245,237,230,0.14)">
+          <span style="width:5px;height:5px;border-radius:999px;background:#E9B95A;flex:none"></span>
+          <span style="font-size:11px;color:#F5EDE6;white-space:nowrap">手动模式</span>
+          <span style="width:1px;height:12px;background:rgba(245,237,230,0.14);flex:none"></span>
+          <span style="font-size:11px;color:#F0785A;white-space:nowrap">重连摄像头</span>
+          <svg width="13" height="13" fill="none" stroke="#F0785A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.8 6.5a4.7 4.7 0 1 0 1.5-3.4"></path><path d="M1.6 2v3h3"></path></svg>
+        </div>
+        <div style="position:absolute;right:16px;bottom:54px;display:flex;align-items:center;gap:12px">
+          <span style="font-size:11px;color:#A4948A;white-space:nowrap">松手放烟花</span>
+          <div style="position:relative;display:flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:999px;background:rgba(240,120,90,0.26);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(240,120,90,0.55)">
+            <div style="width:22px;height:22px;border-radius:999px;background:linear-gradient(135deg,#F0785A 0%,#E9B95A 100%)"></div>
+            <svg width="68" height="68" style="position:absolute;left:-6px;top:-6px;transform:rotate(-90deg)">
+              <circle cx="34" cy="34" r="31" fill="none" stroke="rgba(245,237,230,0.14)" stroke-width="2"></circle>
+              <circle cx="34" cy="34" r="31" fill="none" stroke="#E9B95A" stroke-width="2" stroke-linecap="round" stroke-dasharray="129.8 194.8"></circle>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="S4-a" data-screen-label="S4-a" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:12px;letter-spacing:.1em;color:#F0785A">S4-a</span><span style="font-size:13px;color:#A4948A">设置抽屉 · 基础版（短按）</span></div>
+      <div style="position:relative;width:390px;height:844px;border-radius:28px;overflow:hidden;border:1px solid rgba(245,237,230,0.14)">
+        <dc-import name="Scene" mode="camera" rain="1" w="390" h="844" seed="101" density="{{ rainDensity }}" animate="{{ animate }}" face-zone="{{ faceZone }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+        <div style="position:absolute;top:54px;right:16px;display:flex;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.6 9s2.8-5.2 7.4-5.2S16.4 9 16.4 9s-2.8 5.2-7.4 5.2S1.6 9 1.6 9Z"></path><circle cx="9" cy="9" r="2.2"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(245,237,230,0.10);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.24);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.6 4.6h12.8M2.6 9h12.8M2.6 13.4h12.8"></path><circle cx="6.4" cy="4.6" r="1.8" fill="#191311"></circle><circle cx="11.4" cy="9" r="1.8" fill="#191311"></circle><circle cx="5.6" cy="13.4" r="1.8" fill="#191311"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4.8 4.8l8.4 8.4M13.2 4.8l-8.4 8.4"></path></svg></div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;height:280px;background:rgba(30,24,21,0.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid rgba(245,237,230,0.14);border-radius:16px 16px 0 0;display:flex;flex-direction:column">
+          <div style="display:flex;justify-content:center;padding-top:8px"><div style="width:36px;height:4px;border-radius:999px;background:rgba(245,237,230,0.24)"></div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 12px 12px 20px">
+            <span style="font-size:17px;font-weight:600;letter-spacing:.02em;color:#F5EDE6">设置</span>
+            <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;color:#A4948A"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4.8 4.8l8.4 8.4M13.2 4.8l-8.4 8.4"></path></svg></div>
+          </div>
+          <div style="height:1px;background:rgba(245,237,230,0.14)"></div>
+          <div style="display:flex;flex-direction:column;gap:18px;padding:20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
+              <span style="font-size:14px;color:#F5EDE6">显示提示与进度条</span>
+              <div style="position:relative;width:44px;height:26px;border-radius:999px;background:linear-gradient(135deg,#F0785A 0%,#E9B95A 100%);flex:none"><div style="position:absolute;top:3px;left:21px;width:20px;height:20px;border-radius:999px;background:#F5EDE6"></div></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;height:44px;border-radius:999px;border:1px solid rgba(245,237,230,0.14);font-size:14px;color:#F5EDE6">重看新手引导</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="S4-b" data-screen-label="S4-b" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:12px;letter-spacing:.1em;color:#F0785A">S4-b</span><span style="font-size:13px;color:#A4948A">设置抽屉 · 高级展开（长按 ≥600ms，内部滚动）</span></div>
+      <div style="position:relative;width:390px;height:844px;border-radius:28px;overflow:hidden;border:1px solid rgba(245,237,230,0.14)">
+        <dc-import name="Scene" mode="camera" rain="1" w="390" h="844" seed="111" density="{{ rainDensity }}" animate="{{ animate }}" face-zone="{{ faceZone }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+        <div style="position:absolute;top:54px;right:16px;display:flex;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.6 9s2.8-5.2 7.4-5.2S16.4 9 16.4 9s-2.8 5.2-7.4 5.2S1.6 9 1.6 9Z"></path><circle cx="9" cy="9" r="2.2"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(245,237,230,0.10);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.24);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.6 4.6h12.8M2.6 9h12.8M2.6 13.4h12.8"></path><circle cx="6.4" cy="4.6" r="1.8" fill="#191311"></circle><circle cx="11.4" cy="9" r="1.8" fill="#191311"></circle><circle cx="5.6" cy="13.4" r="1.8" fill="#191311"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4.8 4.8l8.4 8.4M13.2 4.8l-8.4 8.4"></path></svg></div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;height:422px;background:rgba(30,24,21,0.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid rgba(245,237,230,0.14);border-radius:16px 16px 0 0;display:flex;flex-direction:column">
+          <div style="display:flex;justify-content:center;padding-top:8px;flex:none"><div style="width:36px;height:4px;border-radius:999px;background:rgba(245,237,230,0.24)"></div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 12px 12px 20px;flex:none">
+            <span style="font-size:17px;font-weight:600;letter-spacing:.02em;color:#F5EDE6">设置</span>
+            <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;color:#A4948A"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4.8 4.8l8.4 8.4M13.2 4.8l-8.4 8.4"></path></svg></div>
+          </div>
+          <div style="height:1px;background:rgba(245,237,230,0.14);flex:none"></div>
+          <div ref="{{ advScrollRef }}" data-noscrollbar="true" style="flex:1;overflow-y:auto;scrollbar-width:none;padding:20px 20px 40px">
+            <div style="display:flex;flex-direction:column;gap:18px">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
+                <span style="font-size:14px;color:#F5EDE6">显示提示与进度条</span>
+                <div style="position:relative;width:44px;height:26px;border-radius:999px;background:linear-gradient(135deg,#F0785A 0%,#E9B95A 100%);flex:none"><div style="position:absolute;top:3px;left:21px;width:20px;height:20px;border-radius:999px;background:#F5EDE6"></div></div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:center;height:44px;border-radius:999px;border:1px solid rgba(245,237,230,0.14);font-size:14px;color:#F5EDE6">重看新手引导</div>
+            </div>
+            <div style="height:1px;background:rgba(245,237,230,0.14);margin:22px 0"></div>
+            <div style="font-size:14px;font-weight:600;color:#F5EDE6;letter-spacing:.02em">触发阈值</div>
+            <div style="margin-top:6px;font-size:12px;line-height:1.7;color:#A4948A">给运营 / 设计调参用，改完不用重新部署</div>
+            <div style="display:flex;flex-direction:column;gap:20px;margin-top:20px">
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:13px;color:#F5EDE6">微笑阈值</span><span style="font-size:13px;color:#E9B95A;font-variant-numeric:tabular-nums">0.45</span></div>
+                <div style="position:relative;display:flex;align-items:center;height:14px"><div style="width:100%;height:3px;border-radius:999px;background:rgba(245,237,230,0.14)"></div><div style="position:absolute;left:0;width:45%;height:3px;border-radius:999px;background:linear-gradient(90deg,#F0785A,#E9B95A)"></div><div style="position:absolute;left:45%;width:14px;height:14px;margin-left:-7px;border-radius:999px;background:#F5EDE6"></div></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:13px;color:#F5EDE6">大笑阈值</span><span style="font-size:13px;color:#E9B95A;font-variant-numeric:tabular-nums">0.35</span></div>
+                <div style="position:relative;display:flex;align-items:center;height:14px"><div style="width:100%;height:3px;border-radius:999px;background:rgba(245,237,230,0.14)"></div><div style="position:absolute;left:0;width:35%;height:3px;border-radius:999px;background:linear-gradient(90deg,#F0785A,#E9B95A)"></div><div style="position:absolute;left:35%;width:14px;height:14px;margin-left:-7px;border-radius:999px;background:#F5EDE6"></div></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:13px;color:#F5EDE6">雨量上限</span><span style="font-size:13px;color:#E9B95A;font-variant-numeric:tabular-nums">1.00</span></div>
+                <div style="position:relative;display:flex;align-items:center;height:14px"><div style="width:100%;height:3px;border-radius:999px;background:rgba(245,237,230,0.14)"></div><div style="position:absolute;left:0;width:100%;height:3px;border-radius:999px;background:linear-gradient(90deg,#F0785A,#E9B95A)"></div><div style="position:absolute;left:100%;width:14px;height:14px;margin-left:-7px;border-radius:999px;background:#F5EDE6"></div></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:13px;color:#F5EDE6">烟花粒子数</span><span style="font-size:13px;color:#E9B95A;font-variant-numeric:tabular-nums">180</span></div>
+                <div style="position:relative;display:flex;align-items:center;height:14px"><div style="width:100%;height:3px;border-radius:999px;background:rgba(245,237,230,0.14)"></div><div style="position:absolute;left:0;width:60%;height:3px;border-radius:999px;background:linear-gradient(90deg,#F0785A,#E9B95A)"></div><div style="position:absolute;left:60%;width:14px;height:14px;margin-left:-7px;border-radius:999px;background:#F5EDE6"></div></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:13px;color:#F5EDE6">碰撞弹性</span><span style="font-size:13px;color:#E9B95A;font-variant-numeric:tabular-nums">0.55</span></div>
+                <div style="position:relative;display:flex;align-items:center;height:14px"><div style="width:100%;height:3px;border-radius:999px;background:rgba(245,237,230,0.14)"></div><div style="position:absolute;left:0;width:55%;height:3px;border-radius:999px;background:linear-gradient(90deg,#F0785A,#E9B95A)"></div><div style="position:absolute;left:55%;width:14px;height:14px;margin-left:-7px;border-radius:999px;background:#F5EDE6"></div></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:13px;color:#F5EDE6">色调偏移</span><span style="font-size:13px;color:#E9B95A;font-variant-numeric:tabular-nums">0</span></div>
+                <div style="position:relative;display:flex;align-items:center;height:14px"><div style="width:100%;height:3px;border-radius:999px;background:rgba(245,237,230,0.14)"></div><div style="position:absolute;left:50%;width:0%;height:3px;border-radius:999px;background:linear-gradient(90deg,#F0785A,#E9B95A)"></div><div style="position:absolute;left:50%;width:14px;height:14px;margin-left:-7px;border-radius:999px;background:#F5EDE6"></div></div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:16px;margin-top:24px">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
+                <span style="font-size:14px;color:#F5EDE6">显示碰撞体</span>
+                <div style="position:relative;width:44px;height:26px;border-radius:999px;background:rgba(245,237,230,0.14);flex:none"><div style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:999px;background:#A4948A"></div></div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
+                <span style="font-size:14px;color:#F5EDE6">显示调试数据</span>
+                <div style="position:relative;width:44px;height:26px;border-radius:999px;background:linear-gradient(135deg,#F0785A 0%,#E9B95A 100%);flex:none"><div style="position:absolute;top:3px;left:21px;width:20px;height:20px;border-radius:999px;background:#F5EDE6"></div></div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;height:48px;margin-top:24px;border-radius:999px;background:linear-gradient(135deg,#F0785A 0%,#E9B95A 100%);color:#1B120E;font-size:15px;font-weight:600;letter-spacing:.02em">复制配置给开发</div>
+            <div style="margin-top:10px;text-align:center;font-size:12px;color:#E9B95A">已复制到剪贴板</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="display:flex;align-items:center;gap:20px;margin:64px 0 24px">
+    <h2 style="margin:0;font-size:20px;font-weight:600;letter-spacing:.04em;color:#F5EDE6">桌面 · 1440×900</h2>
+    <div style="flex:1;height:1px;background:rgba(245,237,230,0.14)"></div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:48px">
+
+    <div id="D-1" data-screen-label="D-1" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:12px;letter-spacing:.1em;color:#F0785A">D-1</span><span style="font-size:13px;color:#A4948A">桌面 S1 开始页 · 默认</span></div>
+      <div style="position:relative;width:1440px;height:900px;border-radius:16px;overflow:hidden;border:1px solid rgba(245,237,230,0.14)">
+        <dc-import name="Scene" mode="gradient" w="1440" h="900" seed="201" density="{{ rainDensity }}" animate="{{ animate }}" face-zone="{{ faceZone }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:72px">
+          <div style="position:relative;width:172px;height:306px;border-radius:18px;overflow:hidden;background:#1E1815;border:1px solid rgba(245,237,230,0.14);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;flex:none">
+            <div style="position:absolute;inset:0;background:radial-gradient(80% 50% at 50% 40%, rgba(240,120,90,0.14), rgba(0,0,0,0) 70%)"></div>
+            <div style="position:relative;display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:999px;background:rgba(20,16,15,0.6);border:1px solid rgba(245,237,230,0.14)">
+              <div style="width:0;height:0;margin-left:3px;border-left:12px solid #F5EDE6;border-top:8px solid transparent;border-bottom:8px solid transparent"></div>
+            </div>
+            <span style="position:relative;font-size:11px;color:#A4948A">玩法预览 · 9:16</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-start;max-width:460px">
+            <h3 style="margin:0;font-size:46px;font-weight:600;line-height:1.28;letter-spacing:.02em;color:#F5EDE6">笑一下，屏幕会开花</h3>
+            <p style="margin:18px 0 0;font-size:16px;line-height:1.9;color:#A4948A">微笑会下雨，大笑会放烟花。</p>
+            <div style="display:flex;align-items:center;justify-content:center;gap:10px;width:280px;height:56px;margin-top:36px;border-radius:999px;background:linear-gradient(135deg,#F0785A 0%,#E9B95A 100%);color:#1B120E;font-size:17px;font-weight:600;letter-spacing:.04em">开始</div>
+          </div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:72px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;letter-spacing:.02em;color:#A4948A"><span style="width:5px;height:5px;border-radius:999px;background:#E9B95A;flex:none"></span>需要打开摄像头</div>
+        <div style="position:absolute;left:0;right:0;bottom:40px;text-align:center;font-size:12px;letter-spacing:.02em;color:#A4948A">Live Demo · 画面只在本机处理，不会上传</div>
+      </div>
+    </div>
+
+    <div id="D-2" data-screen-label="D-2" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:12px;letter-spacing:.1em;color:#F0785A">D-2</span><span style="font-size:13px;color:#A4948A">桌面 S2 · Smiling</span></div>
+      <div style="position:relative;width:1440px;height:900px;border-radius:16px;overflow:hidden;border:1px solid rgba(245,237,230,0.14)">
+        <dc-import name="Scene" mode="camera" rain="1" w="1440" h="900" seed="211" density="{{ rainDensity }}" animate="{{ animate }}" face-zone="{{ faceZone }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+        <div style="position:absolute;top:28px;right:28px;display:flex;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.8 10s3.1-5.8 8.2-5.8S18.2 10 18.2 10s-3.1 5.8-8.2 5.8S1.8 10 1.8 10Z"></path><circle cx="10" cy="10" r="2.4"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.8 5h14.4M2.8 10h14.4M2.8 15h14.4"></path><circle cx="7.2" cy="5" r="2" fill="#191311"></circle><circle cx="12.6" cy="10" r="2" fill="#191311"></circle><circle cx="6.2" cy="15" r="2" fill="#191311"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5.4 5.4l9.2 9.2M14.6 5.4l-9.2 9.2"></path></svg></div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:44px;display:flex;flex-direction:column;align-items:center;gap:16px">
+          <div style="font-size:15px;letter-spacing:.02em;color:#F5EDE6">再张开嘴大笑试试</div>
+          <div style="display:flex;flex-direction:column;gap:11px">
+            <div style="display:flex;align-items:center;gap:10px"><span style="width:28px;text-align:right;font-size:11px;color:#A4948A">微笑</span><div style="width:200px;height:3px;border-radius:999px;background:rgba(245,237,230,0.14);overflow:hidden"><div style="width:100%;height:100%;border-radius:999px;background:#BFD4F2"></div></div></div>
+            <div style="display:flex;align-items:center;gap:10px"><span style="width:28px;text-align:right;font-size:11px;color:#A4948A">大笑</span><div style="width:200px;height:3px;border-radius:999px;background:rgba(245,237,230,0.14);overflow:hidden"><div style="width:34%;height:100%;border-radius:999px;background:#F0785A"></div></div></div>
+          </div>
+        </div>
+        <div style="position:absolute;right:28px;bottom:44px;display:flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 13.8V3.8"></path><path d="M7.4 7.4L11 3.6l3.6 3.8"></path><path d="M4.8 12.6v3.8a2 2 0 0 0 2 2h8.4a2 2 0 0 0 2-2v-3.8"></path></svg></div>
+      </div>
+    </div>
+
+    <div id="D-3" data-screen-label="D-3" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:12px;letter-spacing:.1em;color:#F0785A">D-3</span><span style="font-size:13px;color:#A4948A">桌面 S4 · 高级展开（右侧 320px 侧栏）</span></div>
+      <div style="position:relative;width:1440px;height:900px;border-radius:16px;overflow:hidden;border:1px solid rgba(245,237,230,0.14)">
+        <dc-import name="Scene" mode="camera" rain="1" w="1440" h="900" seed="221" density="{{ rainDensity }}" animate="{{ animate }}" face-zone="{{ faceZone }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+        <div style="position:absolute;top:28px;right:348px;display:flex;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.8 10s3.1-5.8 8.2-5.8S18.2 10 18.2 10s-3.1 5.8-8.2 5.8S1.8 10 1.8 10Z"></path><circle cx="10" cy="10" r="2.4"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:999px;background:rgba(245,237,230,0.10);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.24);color:#F5EDE6"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.8 5h14.4M2.8 10h14.4M2.8 15h14.4"></path><circle cx="7.2" cy="5" r="2" fill="#191311"></circle><circle cx="12.6" cy="10" r="2" fill="#191311"></circle><circle cx="6.2" cy="15" r="2" fill="#191311"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:999px;background:rgba(20,16,15,0.6);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5.4 5.4l9.2 9.2M14.6 5.4l-9.2 9.2"></path></svg></div>
+        </div>
+        <div style="position:absolute;left:0;right:320px;bottom:44px;display:flex;flex-direction:column;align-items:center;gap:11px">
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:28px;text-align:right;font-size:11px;color:#A4948A">微笑</span><div style="width:200px;height:3px;border-radius:999px;background:rgba(245,237,230,0.14);overflow:hidden"><div style="width:88%;height:100%;border-radius:999px;background:#BFD4F2"></div></div></div>
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:28px;text-align:right;font-size:11px;color:#A4948A">大笑</span><div style="width:200px;height:3px;border-radius:999px;background:rgba(245,237,230,0.14);overflow:hidden"><div style="width:24%;height:100%;border-radius:999px;background:#F0785A"></div></div></div>
+        </div>
+        <div style="position:absolute;top:0;right:0;bottom:0;width:320px;background:rgba(30,24,21,0.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-left:1px solid rgba(245,237,230,0.14);display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 12px 18px 24px;flex:none">
+            <span style="font-size:17px;font-weight:600;letter-spacing:.02em;color:#F5EDE6">设置</span>
+            <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;color:#A4948A"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4.8 4.8l8.4 8.4M13.2 4.8l-8.4 8.4"></path></svg></div>
+          </div>
+          <div style="height:1px;background:rgba(245,237,230,0.14);flex:none"></div>
+          <div data-noscrollbar="true" style="flex:1;overflow-y:auto;scrollbar-width:none;padding:22px 24px 32px">
+            <div style="display:flex;flex-direction:column;gap:18px">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
+                <span style="font-size:14px;color:#F5EDE6">显示提示与进度条</span>
+                <div style="position:relative;width:44px;height:26px;border-radius:999px;background:linear-gradient(135deg,#F0785A 0%,#E9B95A 100%);flex:none"><div style="position:absolute;top:3px;left:21px;width:20px;height:20px;border-radius:999px;background:#F5EDE6"></div></div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:center;height:44px;border-radius:999px;border:1px solid rgba(245,237,230,0.14);font-size:14px;color:#F5EDE6">重看新手引导</div>
+            </div>
+            <div style="height:1px;background:rgba(245,237,230,0.14);margin:22px 0"></div>
+            <div style="font-size:14px;font-weight:600;color:#F5EDE6;letter-spacing:.02em">触发阈值</div>
+            <div style="margin-top:6px;font-size:12px;line-height:1.7;color:#A4948A">给运营 / 设计调参用，改完不用重新部署</div>
+            <div style="display:flex;flex-direction:column;gap:20px;margin-top:20px">
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:13px;color:#F5EDE6">微笑阈值</span><span style="font-size:13px;color:#E9B95A;font-variant-numeric:tabular-nums">0.45</span></div>
+                <div style="position:relative;display:flex;align-items:center;height:14px"><div style="width:100%;height:3px;border-radius:999px;background:rgba(245,237,230,0.14)"></div><div style="position:absolute;left:0;width:45%;height:3px;border-radius:999px;background:linear-gradient(90deg,#F0785A,#E9B95A)"></div><div style="position:absolute;left:45%;width:14px;height:14px;margin-left:-7px;border-radius:999px;background:#F5EDE6"></div></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:13px;color:#F5EDE6">大笑阈值</span><span style="font-size:13px;color:#E9B95A;font-variant-numeric:tabular-nums">0.35</span></div>
+                <div style="position:relative;display:flex;align-items:center;height:14px"><div style="width:100%;height:3px;border-radius:999px;background:rgba(245,237,230,0.14)"></div><div style="position:absolute;left:0;width:35%;height:3px;border-radius:999px;background:linear-gradient(90deg,#F0785A,#E9B95A)"></div><div style="position:absolute;left:35%;width:14px;height:14px;margin-left:-7px;border-radius:999px;background:#F5EDE6"></div></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:13px;color:#F5EDE6">雨量上限</span><span style="font-size:13px;color:#E9B95A;font-variant-numeric:tabular-nums">1.00</span></div>
+                <div style="position:relative;display:flex;align-items:center;height:14px"><div style="width:100%;height:3px;border-radius:999px;background:rgba(245,237,230,0.14)"></div><div style="position:absolute;left:0;width:100%;height:3px;border-radius:999px;background:linear-gradient(90deg,#F0785A,#E9B95A)"></div><div style="position:absolute;left:100%;width:14px;height:14px;margin-left:-7px;border-radius:999px;background:#F5EDE6"></div></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:13px;color:#F5EDE6">烟花粒子数</span><span style="font-size:13px;color:#E9B95A;font-variant-numeric:tabular-nums">180</span></div>
+                <div style="position:relative;display:flex;align-items:center;height:14px"><div style="width:100%;height:3px;border-radius:999px;background:rgba(245,237,230,0.14)"></div><div style="position:absolute;left:0;width:60%;height:3px;border-radius:999px;background:linear-gradient(90deg,#F0785A,#E9B95A)"></div><div style="position:absolute;left:60%;width:14px;height:14px;margin-left:-7px;border-radius:999px;background:#F5EDE6"></div></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:13px;color:#F5EDE6">碰撞弹性</span><span style="font-size:13px;color:#E9B95A;font-variant-numeric:tabular-nums">0.55</span></div>
+                <div style="position:relative;display:flex;align-items:center;height:14px"><div style="width:100%;height:3px;border-radius:999px;background:rgba(245,237,230,0.14)"></div><div style="position:absolute;left:0;width:55%;height:3px;border-radius:999px;background:linear-gradient(90deg,#F0785A,#E9B95A)"></div><div style="position:absolute;left:55%;width:14px;height:14px;margin-left:-7px;border-radius:999px;background:#F5EDE6"></div></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:13px;color:#F5EDE6">色调偏移</span><span style="font-size:13px;color:#E9B95A;font-variant-numeric:tabular-nums">0</span></div>
+                <div style="position:relative;display:flex;align-items:center;height:14px"><div style="width:100%;height:3px;border-radius:999px;background:rgba(245,237,230,0.14)"></div><div style="position:absolute;left:50%;width:0%;height:3px;border-radius:999px;background:linear-gradient(90deg,#F0785A,#E9B95A)"></div><div style="position:absolute;left:50%;width:14px;height:14px;margin-left:-7px;border-radius:999px;background:#F5EDE6"></div></div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:16px;margin-top:24px">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
+                <span style="font-size:14px;color:#F5EDE6">显示碰撞体</span>
+                <div style="position:relative;width:44px;height:26px;border-radius:999px;background:rgba(245,237,230,0.14);flex:none"><div style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:999px;background:#A4948A"></div></div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
+                <span style="font-size:14px;color:#F5EDE6">显示调试数据</span>
+                <div style="position:relative;width:44px;height:26px;border-radius:999px;background:linear-gradient(135deg,#F0785A 0%,#E9B95A 100%);flex:none"><div style="position:absolute;top:3px;left:21px;width:20px;height:20px;border-radius:999px;background:#F5EDE6"></div></div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;height:48px;margin-top:24px;border-radius:999px;background:linear-gradient(135deg,#F0785A 0%,#E9B95A 100%);color:#1B120E;font-size:15px;font-weight:600;letter-spacing:.02em">复制配置给开发</div>
+            <div style="margin-top:10px;text-align:center;font-size:12px;color:#E9B95A">已复制到剪贴板</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="display:flex;align-items:center;gap:20px;margin:64px 0 24px">
+    <h2 style="margin:0;font-size:20px;font-weight:600;letter-spacing:.04em;color:#F5EDE6">组件表</h2>
+    <div style="flex:1;height:1px;background:rgba(245,237,230,0.14)"></div>
+  </div>
+
+  <div id="C-1" data-screen-label="C-1" style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:12px;letter-spacing:.1em;color:#F0785A">C-1</span><span style="font-size:13px;color:#A4948A">按钮 / 容器 / 进度条 / 开关 / 滑杆 / toast</span></div>
+    <div style="position:relative;width:1180px;border-radius:16px;overflow:hidden;border:1px solid rgba(245,237,230,0.14);background:#14100F;padding:40px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px 44px">
+
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="font-size:12px;letter-spacing:.14em;color:#A4948A">主按钮 · 珊瑚→金 135°</div>
+        <div style="display:flex;align-items:center;justify-content:center;height:52px;border-radius:999px;background:linear-gradient(135deg,#F0785A 0%,#E9B95A 100%);color:#1B120E;font-size:16px;font-weight:600">默认</div>
+        <div style="display:flex;align-items:center;justify-content:center;height:52px;border-radius:999px;background:linear-gradient(135deg,#F0785A 0%,#E9B95A 100%);color:#1B120E;font-size:16px;font-weight:600;filter:brightness(.86);transform:scale(.98)">按下</div>
+        <div style="display:flex;align-items:center;justify-content:center;height:52px;border-radius:999px;background:linear-gradient(135deg,#F0785A 0%,#E9B95A 100%);color:#1B120E;font-size:16px;font-weight:600;opacity:.45">禁用</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="font-size:12px;letter-spacing:.14em;color:#A4948A">幽灵按钮 · 透明底 + 描边</div>
+        <div style="display:flex;align-items:center;justify-content:center;height:52px;border-radius:999px;border:1px solid rgba(245,237,230,0.14);color:#F5EDE6;font-size:15px">默认</div>
+        <div style="display:flex;align-items:center;justify-content:center;height:52px;border-radius:999px;border:1px solid rgba(240,120,90,0.55);background:rgba(240,120,90,0.12);color:#F5EDE6;font-size:15px;transform:scale(.98)">按下</div>
+        <div style="display:flex;align-items:center;justify-content:center;height:52px;border-radius:999px;border:1px solid rgba(245,237,230,0.14);color:#F5EDE6;font-size:15px;opacity:.45">禁用</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="font-size:12px;letter-spacing:.14em;color:#A4948A">玻璃圆钮 40 / 48 / 56</div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.6 4.6h12.8M2.6 9h12.8M2.6 13.4h12.8"></path><circle cx="6.4" cy="4.6" r="1.8" fill="#191311"></circle><circle cx="11.4" cy="9" r="1.8" fill="#191311"></circle><circle cx="5.6" cy="13.4" r="1.8" fill="#191311"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(245,237,230,0.10);border:1px solid rgba(245,237,230,0.24);color:#F5EDE6"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.6 4.6h12.8M2.6 9h12.8M2.6 13.4h12.8"></path><circle cx="6.4" cy="4.6" r="1.8" fill="#191311"></circle><circle cx="11.4" cy="9" r="1.8" fill="#191311"></circle><circle cx="5.6" cy="13.4" r="1.8" fill="#191311"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(20,16,15,0.6);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6;opacity:.45"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.6 4.6h12.8M2.6 9h12.8M2.6 13.4h12.8"></path><circle cx="6.4" cy="4.6" r="1.8" fill="#191311"></circle><circle cx="11.4" cy="9" r="1.8" fill="#191311"></circle><circle cx="5.6" cy="13.4" r="1.8" fill="#191311"></circle></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:999px;background:rgba(20,16,15,0.6);border:1px solid rgba(245,237,230,0.14);color:#F5EDE6"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12.6V3.4"></path><path d="M6.6 6.6L10 3.2l3.4 3.4"></path><path d="M4.4 11.4v3.4a1.8 1.8 0 0 0 1.8 1.8h7.6a1.8 1.8 0 0 0 1.8-1.8v-3.4"></path></svg></div>
+          <div style="display:flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:999px;background:rgba(240,120,90,0.16);border:1px solid rgba(240,120,90,0.55)"><div style="width:18px;height:18px;border-radius:999px;background:linear-gradient(135deg,#F0785A 0%,#E9B95A 100%)"></div></div>
+        </div>
+        <div style="font-size:11px;line-height:1.8;color:#A4948A">默认 / 按下 / 禁用 · 分享钮 48 · 手动模式主钮 56</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="font-size:12px;letter-spacing:.14em;color:#A4948A">玻璃胶囊 · 状态与横幅</div>
+        <div style="display:flex;align-items:center;align-self:flex-start;height:34px;padding:0 14px;border-radius:999px;background:rgba(20,16,15,0.6);border:1px solid rgba(245,237,230,0.14);font-size:12px;color:#F5EDE6">把脸放进画面里</div>
+        <div style="display:flex;align-items:center;gap:8px;align-self:flex-start;height:34px;padding:0 12px;border-radius:999px;background:rgba(20,16,15,0.6);border:1px solid rgba(245,237,230,0.14)">
+          <span style="width:5px;height:5px;border-radius:999px;background:#E9B95A;flex:none"></span>
+          <span style="font-size:11px;color:#F5EDE6;white-space:nowrap">手动模式</span>
+          <span style="width:1px;height:12px;background:rgba(245,237,230,0.14);flex:none"></span>
+          <span style="font-size:11px;color:#F0785A;white-space:nowrap">重连摄像头</span>
+          <svg width="13" height="13" fill="none" stroke="#F0785A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.8 6.5a4.7 4.7 0 1 0 1.5-3.4"></path><path d="M1.6 2v3h3"></path></svg>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="font-size:12px;letter-spacing:.14em;color:#A4948A">两根进度条 · 160×3</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:26px;text-align:right;font-size:11px;color:#A4948A">微笑</span><div style="width:160px;height:3px;border-radius:999px;background:rgba(245,237,230,0.14);overflow:hidden"><div style="width:0%;height:100%;border-radius:999px;background:#BFD4F2"></div></div></div>
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:26px;text-align:right;font-size:11px;color:#A4948A">微笑</span><div style="width:160px;height:3px;border-radius:999px;background:rgba(245,237,230,0.14);overflow:hidden"><div style="width:60%;height:100%;border-radius:999px;background:#BFD4F2"></div></div></div>
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:26px;text-align:right;font-size:11px;color:#A4948A">大笑</span><div style="width:160px;height:3px;border-radius:999px;background:rgba(245,237,230,0.14);overflow:hidden"><div style="width:34%;height:100%;border-radius:999px;background:#F0785A"></div></div></div>
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:26px;text-align:right;font-size:11px;color:#A4948A">大笑</span><div style="width:160px;height:3px;border-radius:999px;background:rgba(245,237,230,0.14);overflow:hidden"><div style="width:100%;height:100%;border-radius:999px;background:#F0785A"></div></div></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="font-size:12px;letter-spacing:.14em;color:#A4948A">开关 / 滑杆 / toast</div>
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="position:relative;width:44px;height:26px;border-radius:999px;background:linear-gradient(135deg,#F0785A 0%,#E9B95A 100%);flex:none"><div style="position:absolute;top:3px;left:21px;width:20px;height:20px;border-radius:999px;background:#F5EDE6"></div></div>
+          <div style="position:relative;width:44px;height:26px;border-radius:999px;background:rgba(245,237,230,0.14);flex:none"><div style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:999px;background:#A4948A"></div></div>
+          <span style="font-size:11px;color:#A4948A">开 / 关</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:13px;color:#F5EDE6">微笑阈值</span><span style="font-size:13px;color:#E9B95A;font-variant-numeric:tabular-nums">0.45</span></div>
+          <div style="position:relative;display:flex;align-items:center;height:14px"><div style="width:100%;height:3px;border-radius:999px;background:rgba(245,237,230,0.14)"></div><div style="position:absolute;left:0;width:45%;height:3px;border-radius:999px;background:linear-gradient(90deg,#F0785A,#E9B95A)"></div><div style="position:absolute;left:45%;width:14px;height:14px;margin-left:-7px;border-radius:999px;background:#F5EDE6"></div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;align-self:flex-start;height:36px;padding:0 16px;border-radius:999px;background:rgba(20,16,15,0.6);border:1px solid rgba(245,237,230,0.14);font-size:13px;color:#F5EDE6">
+          <svg width="14" height="14" fill="none" stroke="#E9B95A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.4 7.4l3 3 6.2-6.4"></path></svg>
+          <span>截图已保存</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;rainDensity&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1,&quot;min&quot;:0.3,&quot;max&quot;:1.8,&quot;step&quot;:0.1,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;粒子&quot;},&quot;animate&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;粒子&quot;},&quot;faceZone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;标注&quot;}}">
+class Component extends DCLogic {
+  componentDidMount(){
+    if(this._adv) this._adv.scrollTop = 172;
+  }
+  renderVals(){
+    const p=this.props||{};
+    return {
+      rainDensity: p.rainDensity ?? 1,
+      animate: p.animate !== false,
+      faceZone: p.faceZone === true,
+      advScrollRef: el => { this._adv = el; if(el) el.scrollTop = 172; }
+    };
+  }
+}
+</script>
+</body>
+</html>

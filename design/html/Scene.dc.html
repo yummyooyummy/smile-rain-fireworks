@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@keyframes sc-rain{from{transform:translateY(-180px) rotate(9deg)}to{transform:translateY(var(--fall)) rotate(9deg)}}
+@keyframes sc-fw{0%{transform:translate(0,0) scale(.5);opacity:0}10%{opacity:1}60%{transform:translate(var(--dx),var(--dy)) scale(1);opacity:.95}100%{transform:translate(var(--dx),var(--dy2)) scale(.4);opacity:0}}
+@keyframes sc-rise{0%{transform:translateY(0);opacity:0}18%{opacity:1}100%{transform:translateY(var(--rise));opacity:.9}}
+@keyframes sc-splash{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(.3);opacity:0}}
+</style>
+</helmet>
+<div style="position:absolute;inset:0;overflow:hidden">
+  <sc-if value="{{ isCamera }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute;inset:0;background:linear-gradient(178deg,#2B211C 0%,#1C1614 44%,#100C0B 100%)"></div>
+    <div style="position:absolute;inset:0;background:radial-gradient(58% 34% at 50% 33%, rgba(245,237,230,0.08), rgba(0,0,0,0) 72%)"></div>
+    <div style="position:absolute;inset:0;background:radial-gradient(118% 88% at 50% 48%, rgba(0,0,0,0) 42%, rgba(0,0,0,0.58) 100%)"></div>
+  </sc-if>
+  <sc-if value="{{ isGradient }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute;inset:0;background:radial-gradient(118% 68% at 50% 10%, #2C201A 0%, #1A1413 46%, #14100F 100%)"></div>
+  </sc-if>
+  <div style="position:absolute;inset:0;pointer-events:none">{{ figureEl }}</div>
+  <div style="position:absolute;inset:0;pointer-events:none">{{ rainEls }}</div>
+  <div style="position:absolute;inset:0;pointer-events:none">{{ fwEls }}</div>
+  <div style="position:absolute;inset:0;pointer-events:none">{{ splashEls }}</div>
+  <div style="position:absolute;inset:0;pointer-events:none">{{ zoneEl }}</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844},&quot;mode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;camera&quot;,&quot;gradient&quot;,&quot;none&quot;],&quot;default&quot;:&quot;camera&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;rain&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;fireworks&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;&quot;,&quot;burst&quot;,&quot;rising&quot;],&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;splash&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;w&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:390,&quot;tsType&quot;:&quot;number&quot;},&quot;h&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:844,&quot;tsType&quot;:&quot;number&quot;},&quot;seed&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:7,&quot;tsType&quot;:&quot;number&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;float&quot;,&quot;default&quot;:1,&quot;tsType&quot;:&quot;number&quot;},&quot;animate&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;faceZone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  rnd(seed){let s=(seed>>>0)||1;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};}
+  renderVals(){
+    const p=this.props||{};
+    const R=React.createElement;
+    const on=v=>v===true||v==='1'||v==='true';
+    const w=Number(p.w)||390, h=Number(p.h)||844;
+    const mode=p.mode||'camera';
+    const animate=!(p.animate===false||p.animate==='0'||p.animate==='false');
+    const dens=Number(p.density)>0?Number(p.density):1;
+    const seed=Number(p.seed)||7;
+    const px=v=>v+'px';
+    const play=animate?'running':'paused';
+    const k=h/844;
+
+    let figureEl=null;
+    if(mode==='camera'){
+      const hw=104*k, hh=121*k;
+      figureEl=[
+        R('div',{key:'head',style:{position:'absolute',left:'50%',top:px(0.295*h),width:px(hw),height:px(hh),transform:'translateX(-50%)',borderRadius:'50% 50% 46% 46%',background:'rgba(245,237,230,0.135)',filter:'blur(10px)'}}),
+        R('div',{key:'neck',style:{position:'absolute',left:'50%',top:px(0.295*h+hh-14*k),width:px(40*k),height:px(34*k),transform:'translateX(-50%)',background:'rgba(245,237,230,0.11)',filter:'blur(9px)'}}),
+        R('div',{key:'body',style:{position:'absolute',left:'50%',top:px(0.46*h),width:px(258*k),height:px(0.56*h),transform:'translateX(-50%)',borderRadius:'48% 48% 0 0',background:'rgba(245,237,230,0.10)',filter:'blur(14px)'}})
+      ];
+    }
+
+    const rainEls=[];
+    if(on(p.rain)){
+      const rr=this.rnd(101+seed);
+      const layers=[{n:44,lw:1,h0:20,h1:38,op:.16,d0:2.9,d1:3.7,b:.7},{n:30,lw:1.4,h0:40,h1:70,op:.34,d0:1.9,d1:2.4,b:.2},{n:15,lw:2.3,h0:76,h1:126,op:.62,d0:1.1,d1:1.5,b:0}];
+      layers.forEach((L,li)=>{
+        const n=Math.max(1,Math.round(L.n*dens*(w/390)));
+        for(let i=0;i<n;i++){
+          const dur=L.d0+rr()*(L.d1-L.d0);
+          rainEls.push(R('div',{key:'r'+li+'-'+i,style:{position:'absolute',left:(rr()*108-4)+'%',top:'-180px',width:px(L.lw),height:px((L.h0+rr()*(L.h1-L.h0))*k),borderRadius:'999px',background:'linear-gradient(180deg, rgba(191,212,242,0) 0%, #BFD4F2 100%)',opacity:L.op,filter:L.b?'blur('+L.b+'px)':'none','--fall':px(h+240),animation:'sc-rain '+dur.toFixed(2)+'s linear infinite',animationDelay:'-'+(rr()*dur).toFixed(2)+'s',animationPlayState:play}}));
+        }
+      });
+    }
+
+    const fwEls=[];
+    const cols=['#F0785A','#E9B95A','#FFF3E0','#6FC3B8'];
+    const fm=p.fireworks||'';
+    if(fm==='burst'){
+      const fr=this.rnd(777+seed);
+      const burst=(bx,by,N,rad0,rad1,alpha,delay,key)=>{
+        fwEls.push(R('div',{key:key+'t',style:{position:'absolute',left:px(bx),top:px(by),width:'1.5px',height:px((h-by)*0.62),marginLeft:'-0.75px',background:'linear-gradient(180deg, rgba(233,185,90,'+(0.30*alpha)+') 0%, rgba(233,185,90,'+(0.06*alpha)+') 34%, rgba(233,185,90,0) 100%)'}}));
+        fwEls.push(R('div',{key:key+'g',style:{position:'absolute',left:px(bx),top:px(by),width:'8px',height:'8px',marginLeft:'-4px',marginTop:'-4px',borderRadius:'999px',background:'#FFF3E0',opacity:0.85*alpha,boxShadow:'0 0 26px 10px rgba(255,243,224,'+(0.16*alpha)+')'}}));
+        for(let i=0;i<N;i++){
+          const a=(i/N)*Math.PI*2+fr()*0.18;
+          const rad=(rad0+fr()*(rad1-rad0))*k;
+          const dx=Math.cos(a)*rad, dy=Math.sin(a)*rad*0.9;
+          const c=cols[i%4], sz=2.4+fr()*3.4;
+          fwEls.push(R('div',{key:key+i,style:{position:'absolute',left:px(bx),top:px(by),width:px(sz),height:px(sz),marginLeft:px(-sz/2),marginTop:px(-sz/2),borderRadius:'999px',background:c,opacity:alpha,boxShadow:'0 0 8px '+c,'--dx':px(dx),'--dy':px(dy),'--dy2':px(dy+118*k),animation:'sc-fw 2.4s cubic-bezier(.15,.6,.35,1) infinite',animationDelay:(delay-fr()*0.1).toFixed(2)+'s',animationPlayState:play}}));
+        }
+      };
+      burst(w*0.60,h*0.185,Math.round(46*dens),78,148,1,-1.34,'a');
+      burst(w*0.27,h*0.30,Math.round(18*dens),44,78,0.42,-1.62,'b');
+    } else if(fm==='rising'){
+      const rx=w*0.63, rise=-0.44*h;
+      fwEls.push(R('div',{key:'rs',style:{position:'absolute',left:px(rx),top:px(h*0.90),animation:'sc-rise 1.7s cubic-bezier(.2,.7,.4,1) infinite',animationDelay:'-1.05s',animationPlayState:play,'--rise':px(rise)},children:[
+        R('div',{key:'tl',style:{position:'absolute',left:'-0.75px',bottom:'0',width:'1.5px',height:px(150*k),background:'linear-gradient(180deg, rgba(233,185,90,0.75) 0%, rgba(240,120,90,0.15) 60%, rgba(240,120,90,0) 100%)'}}),
+        R('div',{key:'hd',style:{position:'absolute',left:'-3px',bottom:px(146*k),width:'6px',height:'6px',borderRadius:'999px',background:'#FFF3E0',boxShadow:'0 0 14px 4px rgba(233,185,90,0.45)'}})
+      ]}));
+    }
+
+    const splashEls=[];
+    if(on(p.splash)){
+      const sr=this.rnd(303+seed);
+      const hx=w*0.5, hy=h*0.30;
+      for(let i=0;i<16;i++){
+        const a=-0.18*Math.PI+sr()*1.36*Math.PI;
+        const d=(16+sr()*46)*k;
+        const c=i%3===0?'#F0785A':(i%3===1?'#FFF3E0':'#E9B95A');
+        const sz=1.4+sr()*1.9;
+        splashEls.push(R('div',{key:'s'+i,style:{position:'absolute',left:px(hx+(sr()-0.5)*46*k),top:px(hy),width:px(sz),height:px(sz),borderRadius:'999px',background:c,boxShadow:'0 0 6px '+c,'--dx':px(Math.cos(a)*d),'--dy':px(Math.abs(Math.sin(a))*d*0.8+10*k),animation:'sc-splash 1.15s ease-out infinite',animationDelay:(-sr()*1.1).toFixed(2)+'s',animationPlayState:play}}));
+      }
+      splashEls.push(R('div',{key:'ring',style:{position:'absolute',left:px(hx),top:px(hy),width:px(34*k),height:px(34*k),marginLeft:px(-17*k),marginTop:px(-17*k),borderRadius:'999px',border:'1px solid rgba(255,243,224,0.28)'}}));
+    }
+
+    let zoneEl=null;
+    if(on(p.faceZone)){
+      const line=t=>({position:'absolute',left:0,right:0,top:t,height:0,borderTop:'1px dashed rgba(240,120,90,0.55)'});
+      zoneEl=[
+        R('div',{key:'z1',style:line('20%')}),
+        R('div',{key:'z2',style:line('80%')}),
+        R('div',{key:'z3',style:{position:'absolute',left:0,right:0,top:'20%',height:'60%',background:'rgba(240,120,90,0.05)'}}),
+        R('div',{key:'z4',style:{position:'absolute',left:'10px',top:'calc(20% + 6px)',fontSize:'10px',letterSpacing:'.08em',color:'#F0785A'}},'人脸区 · UI 禁入')
+      ];
+    }
+
+    return {isCamera:mode==='camera',isGradient:mode==='gradient',figureEl,rainEls,fwEls,splashEls,zoneEl};
+  }
+}
+</script>
+</body>
+</html>
