@@ -56,8 +56,10 @@ async function fetchModel(url: string, onProgress?: ModelProgress): Promise<Uint
 
 async function exists(url: string): Promise<boolean> {
   try {
-    const res = await fetch(url, { method: 'HEAD' })
-    return res.ok
+    const r = await fetch(url, { method: 'HEAD' })
+    // Vite dev server 对不存在的路径会回 index.html（SPA 兜底），HEAD 也是 200——
+    // 必须再看 content-type，否则会把一页 HTML 当模型喂给 MediaPipe（"not a valid Flatbuffer"）
+    return r.ok && !(r.headers.get('content-type') || '').includes('text/html')
   } catch {
     return false
   }
