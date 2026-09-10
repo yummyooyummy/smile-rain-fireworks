@@ -18,6 +18,8 @@ export const copy = {
   hud: {
     manualHint: '点一下下雨 · 长按放烟花',
     gear: '调参',
+    share: '分享截图',
+    shareTitle: '笑雨烟花',
   },
   status: {
     noFace: '把脸放进画面里',

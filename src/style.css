@@ -167,6 +167,7 @@ body {
 .btn-primary:focus-visible,
 .btn-ghost:focus-visible,
 .manual:focus-visible,
+.share:focus-visible,
 .gear:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 3px;
@@ -266,6 +267,38 @@ body {
   height: 18px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--accent), var(--gold));
+}
+
+/* 截图分享：挨着手动圆钮左侧，略小一号，不挡画面中央 */
+.share {
+  position: absolute;
+  right: calc(20px + 56px + 12px + env(safe-area-inset-right, 0px));
+  bottom: calc(24px + 8px + env(safe-area-inset-bottom, 0px));
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(20, 16, 15, 0.55);
+  backdrop-filter: blur(10px);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.share:active {
+  transform: scale(0.93);
+}
+
+.share svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* ---------- 齿轮 ---------- */

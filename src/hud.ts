@@ -28,17 +28,23 @@ export class Hud {
   private guideFill!: HTMLElement
   private statusEl!: HTMLElement
   private manualBtn!: HTMLButtonElement
+  private shareBtn!: HTMLButtonElement
   private gearBtn!: HTMLButtonElement
   private errorPage!: HTMLElement
   private debugEl!: HTMLElement
+  private video: HTMLVideoElement
+  private fx: HTMLCanvasElement
 
   private holdTimer: number | null = null
   private repeatTimer: number | null = null
   private didHold = false
+  private sharing = false
 
   constructor(root: HTMLElement, cb: HudCallbacks) {
     this.root = root
     this.cb = cb
+    this.video = document.getElementById('cam') as HTMLVideoElement
+    this.fx = document.getElementById('fx') as HTMLCanvasElement
     this.build()
   }
 
@@ -64,6 +70,14 @@ export class Hud {
         <span class="manual-dot"></span>
       </button>
 
+      <button class="share" id="shareBtn" aria-label="${copy.hud.share}" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3v12" />
+          <path d="M7 8l5-5 5 5" />
+          <path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" />
+        </svg>
+      </button>
+
       <button class="gear" id="gearBtn" aria-label="${copy.hud.gear}" hidden>◔</button>
 
       <div class="error" id="errorPage" hidden></div>
@@ -80,12 +94,14 @@ export class Hud {
     this.guideFill = $('guideFill')
     this.statusEl = $('statusEl')
     this.manualBtn = $('manualBtn')
+    this.shareBtn = $('shareBtn')
     this.gearBtn = $('gearBtn')
     this.errorPage = $('errorPage')
     this.debugEl = $('debugEl')
 
     this.startBtn.addEventListener('click', () => this.cb.onStart())
     this.gearBtn.addEventListener('click', () => this.cb.onGearClick())
+    this.shareBtn.addEventListener('click', () => void this.shareFrame())
     this.bindManual()
   }
 
@@ -139,6 +155,67 @@ export class Hud {
   showControls(opts: { gear: boolean }): void {
     this.manualBtn.hidden = false
     this.gearBtn.hidden = !opts.gear
+    this.shareBtn.hidden = !this.hasCamera()
+  }
+
+  private hasCamera(): boolean {
+    return !!this.video.srcObject
+  }
+
+  /** 合成当前画面：video 按 CSS 同样做 scaleX(-1)，再叠粒子 canvas。 */
+  private composeFrame(): HTMLCanvasElement | null {
+    const w = this.fx.width
+    const h = this.fx.height
+    if (!w || !h) return null
+    const off = document.createElement('canvas')
+    off.width = w
+    off.height = h
+    const ctx = off.getContext('2d')
+    if (!ctx) return null
+
+    const vw = this.video.videoWidth
+    const vh = this.video.videoHeight
+    if (vw > 0 && vh > 0) {
+      ctx.save()
+      ctx.translate(w, 0)
+      ctx.scale(-1, 1)
+      const scale = Math.max(w / vw, h / vh)
+      const sw = w / scale
+      const sh = h / scale
+      ctx.drawImage(this.video, (vw - sw) / 2, (vh - sh) / 2, sw, sh, 0, 0, w, h)
+      ctx.restore()
+    }
+    ctx.drawImage(this.fx, 0, 0)
+    return off
+  }
+
+  private async shareFrame(): Promise<void> {
+    if (this.sharing || !this.hasCamera()) return
+    const off = this.composeFrame()
+    if (!off) return
+    this.sharing = true
+    try {
+      const blob = await new Promise<Blob | null>((resolve) => off.toBlob(resolve, 'image/png'))
+      if (!blob) return
+      const file = new File([blob], 'smile-rain-fireworks.png', { type: 'image/png' })
+      const payload = { files: [file], title: copy.hud.shareTitle }
+      try {
+        if (navigator.share && (!navigator.canShare || navigator.canShare(payload))) {
+          await navigator.share(payload)
+          return
+        }
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') return
+      }
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = file.name
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      this.sharing = false
+    }
   }
 
   // ---------- 引导 ----------
