@@ -388,6 +388,8 @@ export class Effects {
       // 落在头顶上方 0.6–1.8 倍头高处，粒子飘落时才会经过头部。
       x = this.w * (0.1 + Math.random() * 0.8)
       targetY = Math.max(this.h * 0.08, head.cy - head.ry * (0.6 + Math.random() * 1.2))
+      // 正对着头的那一列，炸点必须高过头顶——不然就在脸前面炸
+      if (Math.abs(x - head.cx) < head.rx * 1.4) targetY = Math.min(targetY, head.cy - head.ry * 1.7)
     } else {
       x = this.w * (0.12 + Math.random() * 0.76)
       targetY = this.h * (0.12 + Math.random() * 0.26) * (scale < 0.6 ? 1.5 : 1)
@@ -456,6 +458,16 @@ export class Effects {
       this.shn[idx] = 0
       this.shi[idx] = 0
     }
+  }
+
+  private inEllipse(x: number, y: number, cx: number, cy: number, rx: number, ry: number, cosR: number, sinR: number): boolean {
+    const dx = x - cx
+    const dy = y - cy
+    const lx = dx * cosR + dy * sinR
+    const ly = -dx * sinR + dy * cosR
+    const u = lx / rx
+    const v = ly / ry
+    return u * u + v * v < 1
   }
 
   /** 二次崩裂：一颗星燃尽前再炸出几颗小星，烟花才「活」——不是均匀熄灭，而是层层迸发 */
@@ -594,8 +606,18 @@ export class Effects {
       this.kvy[i] += this.kay[i] * dt
       this.kx[i] += this.kvx[i] * dt
       this.ky[i] += this.kvy[i] * dt
-      // 到达顶点（或飞出画面顶部）就炸开
+      // 到达顶点（或飞出画面顶部）就炸开；顶点落在人身上就再推一把继续往上，别在脸前面炸
       if (this.kvy[i] >= 0 || this.ky[i] < 8) {
+        const onPerson =
+          this.ky[i] > 30 &&
+          (person
+            ? person.isPerson(this.kx[i], this.ky[i])
+            : hasHead && this.inEllipse(this.kx[i], this.ky[i], cx, cy, rx, ry, cosR, sinR))
+        if (onPerson) {
+          this.kvy[i] = -260
+          this.kay[i] = 180
+          continue
+        }
         this.burst(this.kx[i], this.ky[i], this.kpower[i], this.kscale[i])
         this.kAlive[i] = 0
         this.rocketAlive--
@@ -739,6 +761,7 @@ export class Effects {
     // 雨画到人身后那层（若开启），其余都在最前面那层
     const rctx = this.rainCtx ?? this.ctx
     this.drawRain(rctx)
+    this.drawRockets(rctx)
     this.drawFront(head)
   }
 
@@ -761,6 +784,26 @@ export class Effects {
       }
       if (any) ctx.stroke()
     }
+  }
+
+  /** 升空中的烟花弹：一个亮点 + 一条尾焰。画在人身后那层——它是从背景升起来的 */
+  private drawRockets(ctx: CanvasRenderingContext2D): void {
+    const glow = this.glow
+    ctx.globalCompositeOperation = 'lighter'
+    for (let i = 0; i < MAX_ROCKETS; i++) {
+      if (!this.kAlive[i]) continue
+      ctx.globalAlpha = 0.9
+      ctx.drawImage(glow[this.kcolor[i]], this.kx[i] - 11, this.ky[i] - 11, 22, 22)
+      ctx.globalAlpha = 0.45
+      ctx.beginPath()
+      ctx.strokeStyle = this.paletteStroke[this.kcolor[i]]
+      ctx.lineWidth = 2
+      ctx.moveTo(this.kx[i], this.ky[i])
+      ctx.lineTo(this.kx[i] - this.kvx[i] * 0.05, this.ky[i] - this.kvy[i] * 0.05)
+      ctx.stroke()
+    }
+    ctx.globalAlpha = 1
+    ctx.globalCompositeOperation = 'source-over'
   }
 
   private drawFront(head: HeadEllipse | null): void {
@@ -792,20 +835,6 @@ export class Effects {
       const rw = r * 0.45
       ctx.globalAlpha = 0.8 * t * t * t
       ctx.drawImage(glow[whiteIdx], this.fx_[i] - rw, this.fy_[i] - rw, rw * 2, rw * 2)
-    }
-
-    // 升空中的烟花弹：一个亮点 + 一条尾焰
-    for (let i = 0; i < MAX_ROCKETS; i++) {
-      if (!this.kAlive[i]) continue
-      ctx.globalAlpha = 0.9
-      ctx.drawImage(glow[this.kcolor[i]], this.kx[i] - 11, this.ky[i] - 11, 22, 22)
-      ctx.globalAlpha = 0.45
-      ctx.beginPath()
-      ctx.strokeStyle = this.paletteStroke[this.kcolor[i]]
-      ctx.lineWidth = 2
-      ctx.moveTo(this.kx[i], this.ky[i])
-      ctx.lineTo(this.kx[i] - this.kvx[i] * 0.05, this.ky[i] - this.kvy[i] * 0.05)
-      ctx.stroke()
     }
 
     // 火花

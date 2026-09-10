@@ -16,7 +16,7 @@ export type Mode = 'idle' | 'smiling' | 'laughing'
 /** 阈值判定的持续时间。注释里的帧数按 20 Hz 检测频率折算。 */
 const HOLD_SMILE_ENTER = 300 // ≈6 检测帧
 const HOLD_SMILE_EXIT = 500 // ≈10 检测帧
-const HOLD_LAUGH_ENTER = 200 // ≈4 检测帧
+const HOLD_LAUGH_ENTER = 150 // ≈3 检测帧；大笑要比微笑先被判出来，否则「突然大笑」会先下雨
 const HOLD_LAUGH_EXIT = 400 // ≈8 检测帧
 const HOLD_NO_FACE = 1000
 
@@ -48,6 +48,7 @@ export class ExpressionState {
   /** 两根进度条：「离微笑触发还差多少」「离大笑触发还差多少」，各自独立 */
   smileProgress = 0
   laughProgress = 0
+  private tSmileHold = 0
 
   /** 里程碑：给引导文案判断走到第几步 */
   reachedSmile = false
@@ -146,12 +147,22 @@ export class ExpressionState {
             this.enterLaughing(sig)
             break
           }
-          this.tSmileEnter = sig.smile >= c.smileEnter ? this.tSmileEnter + ms : 0
+          // 意图判断：嘴正在张开（jaw 已过大笑阈值的 60%）说明这多半是一次大笑的前半段，
+          // 微笑的计时先停一停（最多 400 ms），别急着下雨。smile 信号总是比 jawOpen 先到，
+          // 不等一下的话「突然大笑」永远会先变成微笑、先下雨、再放烟花。
+          const opening = sig.jawOpen >= c.laughJaw * 0.6
+          if (opening && this.tSmileHold < 400) {
+            this.tSmileHold += ms
+          } else {
+            this.tSmileEnter = sig.smile >= c.smileEnter ? this.tSmileEnter + ms : 0
+          }
+          if (!opening) this.tSmileHold = 0
           if (this.tSmileEnter >= HOLD_SMILE_ENTER) {
             this.mode = 'smiling'
             this.reachedSmile = true
             this.tSmileEnter = 0
             this.tSmileExit = 0
+            this.tSmileHold = 0
           }
           break
         }
@@ -229,8 +240,7 @@ export class ExpressionState {
 
     // ---- 两根进度条：各自独立，互不清零 ----
     this.smileProgress = this.mode !== 'idle' ? 1 : Math.min(1, sig.smile / c.smileEnter)
-    this.laughProgress =
-      this.mode === 'laughing' ? 1 : this.mode === 'smiling' ? Math.min(1, sig.jawOpen / c.laughJaw) : 0
+    this.laughProgress = this.mode === 'laughing' ? 1 : Math.min(1, sig.jawOpen / c.laughJaw)
   }
 
   private enterLaughing(sig: Signals): void {
