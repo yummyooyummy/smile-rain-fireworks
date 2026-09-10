@@ -358,7 +358,7 @@ function loop(now: number): void {
   // 4. 发射：烟花从画面底部升空，到高处再炸开，粒子受重力落到人身上
   if (state.burstPending) {
     state.burstPending = false
-    effects.launch(state.burstPower, state.burstScale)
+    effects.launch(state.burstPower, state.burstScale, cameraOn ? sig.head : testHeadOn && cfg.showDebug ? testHead : null)
   }
   effects.setRainRate(state.rainRate)
 
