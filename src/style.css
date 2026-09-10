@@ -316,8 +316,8 @@ body {
 
 /* 视频没录出来之前这个槽位是 hidden 的，不占位、不留黑框。 */
 .preview {
-  width: 161px;
-  height: 287px;
+  width: min(100%, 220px);
+  aspect-ratio: 1 / 1;
   border-radius: 18px;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -1130,8 +1130,7 @@ body {
   }
 
   .preview {
-    width: 172px;
-    height: 306px;
+    width: 240px;
     flex: none;
   }
 
