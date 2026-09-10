@@ -64,12 +64,16 @@ panel.innerHTML = `
     <div class="drawer-handle" aria-hidden="true"><i></i></div>
     <header class="drawer-head">
       <h2 class="drawer-title">${copy.drawer.title}</h2>
-      <button type="button" class="drawer-close" id="drawerClose" aria-label="${copy.drawer.close}">×</button>
+      <button type="button" class="drawer-close" id="drawerClose" aria-label="${copy.drawer.close}">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <path d="M4.8 4.8l8.4 8.4M13.2 4.8l-8.4 8.4"/>
+        </svg>
+      </button>
     </header>
     <div class="drawer-body">
       <label class="drawer-switch">
-        <input type="checkbox" data-toggle="showGuide" />
         <span>${copy.drawer.showGuide}</span>
+        <input type="checkbox" data-toggle="showGuide" />
       </label>
       <button type="button" class="btn-ghost drawer-replay" id="drawerReplay">${copy.drawer.replayGuide}</button>
 
@@ -78,8 +82,8 @@ panel.innerHTML = `
         <p class="drawer-hint">${copy.drawer.advancedHint}</p>
         ${sliderMarkup}
         <label class="drawer-switch">
-          <input type="checkbox" data-toggle="showDebug" />
           <span>${copy.drawer.showDebug}</span>
+          <input type="checkbox" data-toggle="showDebug" />
         </label>
         <button type="button" class="btn-primary drawer-export" id="drawerExport">${copy.drawer.copyConfig}</button>
         <p class="drawer-feedback" id="drawerFeedback" hidden></p>
@@ -106,6 +110,14 @@ let pushed = false
 // 打开前谁有焦点，关上还给谁——键盘用户关掉抽屉后不该被丢回页面顶端
 let lastFocus: HTMLElement | null = null
 
+function sliderFill(input: HTMLInputElement): void {
+  const min = Number(input.min)
+  const max = Number(input.max)
+  const val = Number(input.value)
+  const p = max === min ? 0 : ((val - min) / (max - min)) * 100
+  input.style.setProperty('--p', `${p}%`)
+}
+
 function syncFromConfig(): void {
   const fx = getFx()
   if (!fx) return
@@ -117,6 +129,7 @@ function syncFromConfig(): void {
     const n = cfg[s.key]
     input.value = String(n)
     val.textContent = formatSlider(s.key, n)
+    sliderFill(input)
   }
   const guide = panel.querySelector<HTMLInputElement>('[data-toggle="showGuide"]')
   const debug = panel.querySelector<HTMLInputElement>('[data-toggle="showDebug"]')
@@ -192,6 +205,7 @@ panel.addEventListener('input', (e) => {
   const slider = t.dataset.slider as SliderKey | undefined
   if (slider) {
     patchConfig({ [slider]: parseSlider(slider, t.value) })
+    sliderFill(t)
     return
   }
   const toggle = t.dataset.toggle
