@@ -55,7 +55,6 @@ export class PersonMask implements PersonCollider {
   lastMs = 0
   lastError = ''
   private busy = false
-  private failed = false
 
   private vw = 640
   private vh = 480
@@ -73,7 +72,8 @@ export class PersonMask implements PersonCollider {
   }
 
   async init(): Promise<void> {
-    if (this.worker || this.failed) return
+    if (this.worker) return
+    this.lastError = ''
     const wasmBase = (await exists(`${LOCAL_WASM_BASE}/vision_wasm_internal.js`)) ? LOCAL_WASM_BASE : CDN_WASM_BASE
     const modelUrl = (await exists(LOCAL_MODEL)) ? LOCAL_MODEL : CDN_MODEL
     const worker = new Worker(new URL('./segment.worker.ts', import.meta.url), { type: 'module' })
@@ -81,7 +81,6 @@ export class PersonMask implements PersonCollider {
     worker.onmessage = (e) => this.onMessage(e.data)
     worker.onerror = (e) => {
       this.lastError = `worker: ${e.message}`.slice(0, 120)
-      this.failed = true
       this.stop()
     }
     worker.postMessage({ type: 'init', wasmBase: new URL(wasmBase, location.href).href, modelUrl })
@@ -104,7 +103,6 @@ export class PersonMask implements PersonCollider {
     } else if (m.type === 'error') {
       // 推理层出错就整个关掉，退回椭圆——绝不让 demo 因为加分项白屏
       this.lastError = String(m.message).slice(0, 120)
-      this.failed = true
       this.stop()
     }
   }
