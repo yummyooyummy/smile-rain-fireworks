@@ -101,6 +101,19 @@ export function readFlags(search = location.search): RuntimeFlags {
   }
 }
 
+const CFG_NUM_KEYS = [
+  'smileEnter',
+  'smileExit',
+  'laughSmile',
+  'laughJaw',
+  'laughExitJaw',
+  'rainMax',
+  'fireworkCount',
+  'restitution',
+  'burstScale',
+  'hueShift',
+] as const
+
 /** 从 URL ?cfg= 读配置覆盖；解析失败静默忽略，绝不让 demo 白屏 */
 export function readConfigOverride(search = location.search): Partial<EffectConfig> {
   const raw = new URLSearchParams(search).get('cfg')
@@ -108,7 +121,13 @@ export function readConfigOverride(search = location.search): Partial<EffectConf
   try {
     const json = decodeURIComponent(escape(atob(raw)))
     const parsed = JSON.parse(json) as Partial<EffectConfig>
-    return parsed && typeof parsed === 'object' ? parsed : {}
+    if (!parsed || typeof parsed !== 'object') return {}
+    const out: Partial<EffectConfig> = { ...parsed }
+    for (const k of CFG_NUM_KEYS) {
+      const v = out[k]
+      if (v !== undefined && (typeof v !== 'number' || !Number.isFinite(v))) delete out[k]
+    }
+    return out
   } catch {
     return {}
   }
