@@ -47,7 +47,6 @@ export const copy = {
   status: {
     noFace: '把脸放进画面里',
     lowLight: '光线有点暗，换个亮一点的地方',
-    paused: '已暂停，回到页面后自动继续',
     idleTitle: '一直没看到人，已经暂停了',
     idleHint: '点一下继续',
   },
