@@ -9,7 +9,7 @@ PC + 手机浏览器直接打开。评审关注三件事：需求定义是否严
 
 - Vite + 原生 TypeScript，无框架。**不得引入** React/Vue/three/pixi/matter/cannon 或任何新的运行时依赖。
 - 唯一第三方依赖：`@mediapipe/tasks-vision@1.0.1`（精确版本，不要升级或降级）。
-- 渲染：单个 Canvas 2D。物理：自写。部署：Vercel（HTTPS，摄像头必需）。
+- 渲染：Canvas 2D 两层（`#rain` 在人身后、`#fx` 在最前）。物理：自写。部署：Vercel（HTTPS，摄像头必需）。
 
 ## 文件职责
 
@@ -18,6 +18,8 @@ PC + 手机浏览器直接打开。评审关注三件事：需求定义是否严
 | `src/main.ts` | 单一 rAF 循环、模块装配、档位自适应、HUD 更新 |
 | `src/camera.ts` | getUserMedia，640×480 前置流 |
 | `src/face.ts` | FaceLandmarker 封装 + **信号总线**（扩展点） |
+| `src/segment.ts` + `segment.worker.ts` | 人像分割（ImageSegmenter，Worker 内同步推理）：CSS mask 遮挡 + 像素级碰撞查表。中/高档开，低档退回椭圆 |
+| `src/view.ts` | 视频 → 屏幕坐标映射（object-fit: cover + 镜像），face / segment 共用 |
 | `src/state.ts` | 三态状态机 + Laughing 内部爆发事件 + 雨量缓入缓出 |
 | `src/particles.ts` | Float32Array 粒子池、雨/烟花弹/火花发射器、椭圆碰撞与分裂、发光贴图 |
 | `src/hud.ts` | 开始页（按钮自己变状态，**没有独立错误页**）、引导 + 两根进度条、右上三钮、手动模式、toast、空闲暂停、调试面板 |
@@ -105,8 +107,10 @@ Laughing 期间雨量目标恒为 0。进度条是两根：`smileProgress`、`la
 ## 屏幕分层
 
 ```
-L0  <video>   CSS transform: scaleX(-1)，playsinline muted autoplay
-L1  <canvas>  全屏，pointer-events: none
+L0  <video#cam>       镜头，scaleX(-1)
+L1  <canvas#rain>     雨（人身后）
+L2  <video#camFront>  同一路流，用人像遮罩 mask-image 抠出来的人；分割未开启时 hidden
+L3  <canvas#fx>       烟花、水花、碎片（人前面）
 L2  #hud      DOM：引导文字+两根进度条（底部居中，文字走完淡出但**进度条常驻**）；
               右上角三钮：隐藏 UI / 设置 / 退出；分享钮（右下，仅摄像头模式）；
               手动触发圆钮（右下 56px，**仅无摄像头时出现**）

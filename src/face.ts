@@ -8,6 +8,7 @@
 //
 // 信号总线是整个项目的扩展点：以后加「转头让烟花倾斜」只是往 Signals 里多加一个字段。
 
+import { coverMap, videoToScreenX, videoToScreenY, type CoverMap } from './view'
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import type { HeadEllipse } from './particles'
 
@@ -178,6 +179,7 @@ export interface Signals {
 }
 
 export class FaceTracker {
+  private cover: CoverMap = { scale: 1, offX: 0, offY: 0 }
   private landmarker: FaceLandmarker | null = null
   private lastTs = 0
   private bsIndex: Record<keyof typeof BS, number> | null = null
@@ -324,9 +326,13 @@ export class FaceTracker {
     this.raw.jaw = score(bi.jaw)
     this.raw.squint = (score(bi.squintL) + score(bi.squintR)) / 2
 
-    // 镜像换算：前置摄像头画面左右翻转，粒子必须画在用户看到的位置
-    const px = (i: number) => (1 - lms[i].x) * w
-    const py = (i: number) => lms[i].y * h
+    // 镜像 + object-fit: cover 换算：手机竖屏上视频按高度放大、左右裁掉一大截，
+    // 直接乘屏幕宽高会把碰撞体横向压扁（见 view.ts）。
+    const cm = coverMap(video.videoWidth || 640, video.videoHeight || 480, w, h, this.cover)
+    const vw = video.videoWidth || 640
+    const vh = video.videoHeight || 480
+    const px = (i: number) => videoToScreenX(lms[i].x * vw, cm, w)
+    const py = (i: number) => videoToScreenY(lms[i].y * vh, cm)
 
     // ---------- 头部碰撞体 ----------
     //

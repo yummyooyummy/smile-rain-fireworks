@@ -42,7 +42,9 @@ body {
 }
 
 /* L0 · 摄像头，CSS 镜像。face.ts 里对 x 做同样的翻转。 */
-#cam {
+/* 分层：#cam 镜头 → #rain 雨（人身后） → #camFront 用人像遮罩抠出来的人 → #fx 烟花与水花 */
+#cam,
+#camFront {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -53,7 +55,8 @@ body {
 }
 
 /* L1 · 粒子层 */
-#fx {
+#fx,
+#rain {
   position: absolute;
   inset: 0;
   pointer-events: none;

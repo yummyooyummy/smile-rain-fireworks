@@ -11,6 +11,7 @@
 //  2. 烟花从画面底部升空、在高处炸开、粒子受重力下落——而不是从嘴里喷出来。
 //     落到头上的粒子会分裂成更小的粒子向四周溅开。
 
+import type { PersonCollider } from './segment'
 import type { EffectConfig, Tier } from './config'
 
 export interface HeadEllipse {
@@ -97,6 +98,9 @@ export interface EffectStats {
 
 export class Effects {
   private ctx: CanvasRenderingContext2D
+  /** 雨的独立图层（人像遮挡开启时雨画在人身后） */
+  private rainCtx: CanvasRenderingContext2D | null = null
+  private nrm = new Float32Array(2)
   private w = 0
   private h = 0
 
@@ -175,15 +179,23 @@ export class Effects {
 
   // ---------- 生命周期 ----------
 
+  private dpr = 1
+
   resize(w: number, h: number, dpr: number): void {
     this.w = w
     this.h = h
-    const c = this.ctx.canvas
-    c.width = Math.round(w * dpr)
-    c.height = Math.round(h * dpr)
-    c.style.width = `${w}px`
-    c.style.height = `${h}px`
-    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    this.dpr = dpr
+    this.fit(this.ctx)
+    if (this.rainCtx) this.fit(this.rainCtx)
+  }
+
+  private fit(ctx: CanvasRenderingContext2D): void {
+    const c = ctx.canvas
+    c.width = Math.round(this.w * this.dpr)
+    c.height = Math.round(this.h * this.dpr)
+    c.style.width = `${this.w}px`
+    c.style.height = `${this.h}px`
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
   }
 
   setConfig(cfg: EffectConfig): void {
@@ -200,6 +212,12 @@ export class Effects {
 
   get currentTier(): Tier {
     return this.tier
+  }
+
+  /** 人像遮挡开启时，雨画到人身后那层；关闭时画回同一张 canvas。 */
+  setRainLayer(canvas: HTMLCanvasElement | null): void {
+    this.rainCtx = canvas ? (canvas.getContext('2d') as CanvasRenderingContext2D) : null
+    if (this.rainCtx) this.fit(this.rainCtx)
   }
 
   /** 退出回开始页时清空所有粒子。只清 alive 标志，不重新分配。 */
@@ -466,7 +484,7 @@ export class Effects {
 
   // ---------- 更新 ----------
 
-  update(dt: number, head: HeadEllipse | null): void {
+  update(dt: number, head: HeadEllipse | null, person: PersonCollider | null = null): void {
     this.splashesThisFrame = 0
     this.collisions = 0
     const dtMs = dt * 1000
@@ -520,9 +538,17 @@ export class Effects {
         this.rainAlive--
         continue
       }
+      // 人像遮罩：雨滴从「不是人」进入「是人」的那一格就是轮廓上沿——头顶、肩膀、举起的手。
+      // 溅一次水花后雨滴继续走，视觉上被人像层挡住（雨在人身后），不会有空洞。
+      if (person && this.rlayer[i] >= 1 && !this.rsplashed[i] && person.isPerson(this.rx[i], this.ry[i])) {
+        this.rsplashed[i] = 1
+        person.normal(this.rx[i], this.ry[i], this.nrm)
+        if (this.nrm[1] < -0.2) this.splash(this.rx[i], this.ry[i], this.nrm[0], this.nrm[1])
+        continue
+      }
       // 只有近处两层、且还没溅过的雨滴，在头顶那段弧线上溅一次水花。
       // 雨滴继续往下走——早期版本让它消失，脸上会出现一个硬边圆形空洞。
-      if (hasHead && this.rlayer[i] >= 1 && !this.rsplashed[i]) {
+      if (!person && hasHead && this.rlayer[i] >= 1 && !this.rsplashed[i]) {
         const dx = this.rx[i] - cx
         const dy = this.ry[i] - cy
         const lx = dx * cosR + dy * sinR
@@ -573,6 +599,16 @@ export class Effects {
         continue
       }
 
+      if (person) {
+        // 从外面进到人像里的那一帧才算撞上；在人像里出生的粒子（近脸炸开）放它出去
+        if (!person.isPerson(this.sx[i], this.sy[i]) || person.isPerson(this.spx[i], this.spy[i])) continue
+        person.normal(this.sx[i], this.sy[i], this.nrm)
+        this.sx[i] = this.spx[i]
+        this.sy[i] = this.spy[i]
+        this.resolveHit(i, this.nrm[0], this.nrm[1], rest)
+        continue
+      }
+
       if (!hasHead) continue
       const dx = this.sx[i] - cx
       const dy = this.sy[i] - cy
@@ -597,38 +633,45 @@ export class Effects {
       const nx = lnx * cosR - lny * sinR
       const ny = lnx * sinR + lny * cosR
 
-      this.collisions++
-      if (this.headPulseCooldown <= 0) {
-        this.headPulse = PULSE_MS
-        this.headPulseCooldown = PULSE_COOLDOWN_MS
-      }
+      this.resolveHit(i, nx, ny, rest)
+    }
+  }
 
-      if (this.sgen[i] === 0) {
-        // 爆炸粒子撞头 → 分裂成更小的粒子溅开，母粒子消失
-        this.shatter(i, nx, ny)
-        this.sAlive[i] = 0
-        this.sparkAlive--
-      } else {
-        // 碎片只反弹，不再分裂，避免连锁把粒子池打满
-        const vn = this.svx[i] * nx + this.svy[i] * ny
-        if (vn < 0) {
-          this.svx[i] -= (1 + rest) * vn * nx
-          this.svy[i] -= (1 + rest) * vn * ny
-          this.svx[i] *= 0.8
-          this.svy[i] *= 0.8
-        }
-        this.sflash[i] = FLASH_MS
+  /** 撞上之后：母粒子分裂、碎片反弹闪白，两条路径（椭圆 / 人像遮罩）共用。 */
+  private resolveHit(i: number, nx: number, ny: number, rest: number): void {
+    this.collisions++
+    if (this.headPulseCooldown <= 0) {
+      this.headPulse = PULSE_MS
+      this.headPulseCooldown = PULSE_COOLDOWN_MS
+    }
+    if (this.sgen[i] === 0) {
+      this.shatter(i, nx, ny)
+      this.sAlive[i] = 0
+      this.sparkAlive--
+    } else {
+      const vn = this.svx[i] * nx + this.svy[i] * ny
+      if (vn < 0) {
+        this.svx[i] -= (1 + rest) * vn * nx
+        this.svy[i] -= (1 + rest) * vn * ny
+        this.svx[i] *= 0.8
+        this.svy[i] *= 0.8
       }
+      this.sflash[i] = FLASH_MS
     }
   }
 
   // ---------- 绘制 ----------
 
   draw(head: HeadEllipse | null): void {
-    const ctx = this.ctx
-    ctx.clearRect(0, 0, this.w, this.h)
+    this.ctx.clearRect(0, 0, this.w, this.h)
+    if (this.rainCtx) this.rainCtx.clearRect(0, 0, this.w, this.h)
+    // 雨画到人身后那层（若开启），其余都在最前面那层
+    const rctx = this.rainCtx ?? this.ctx
+    this.drawRain(rctx)
+    this.drawFront(head)
+  }
 
-    // 雨：按层从远到近画，远层先画被近层压住，强化景深
+  private drawRain(ctx: CanvasRenderingContext2D): void {
     ctx.globalCompositeOperation = 'source-over'
     ctx.lineCap = 'round'
     const rc = `${this.rainColor[0] | 0},${this.rainColor[1] | 0},${this.rainColor[2] | 0}`
@@ -648,7 +691,10 @@ export class Effects {
       }
       if (any) ctx.stroke()
     }
+  }
 
+  private drawFront(head: HeadEllipse | null): void {
+    const ctx = this.ctx
     // 头部微光脉冲：碰撞发生时沿椭圆边缘亮一圈
     if (head && this.headPulse > 0) {
       const t = this.headPulse / PULSE_MS

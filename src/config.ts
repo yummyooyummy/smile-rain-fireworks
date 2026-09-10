@@ -73,6 +73,10 @@ export interface RuntimeFlags {
   debug: boolean
   pro: boolean
   clean: boolean
+  /** ?seg=0 关掉人像分割（对比性能用） */
+  seg: boolean
+  /** ?tier=low|mid|high 钉住档位，不自适应（对比性能用） */
+  tier: 'low' | 'mid' | 'high' | null
 }
 
 export function readFlags(search = location.search): RuntimeFlags {
@@ -82,6 +86,8 @@ export function readFlags(search = location.search): RuntimeFlags {
     debug: p.get('debug') === '1',
     pro: mode === 'pro',
     clean: mode === 'clean',
+    seg: p.get('seg') !== '0',
+    tier: (['low', 'mid', 'high'] as const).find((t) => t === p.get('tier')) ?? null,
   }
 }
 

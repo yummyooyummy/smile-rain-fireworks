@@ -18,6 +18,7 @@ import { copy } from './copy'
 import { FaceTracker } from './face'
 import { Hud } from './hud'
 import { Effects } from './particles'
+import { PersonMask } from './segment'
 import { ExpressionState } from './state'
 
 const DETECT_EVERY = 3
@@ -25,6 +26,8 @@ const MAX_DPR = 2
 
 const video = document.getElementById('cam') as HTMLVideoElement
 const canvas = document.getElementById('fx') as HTMLCanvasElement
+const rainCanvas = document.getElementById('rain') as HTMLCanvasElement
+const camFront = document.getElementById('camFront') as HTMLVideoElement
 const hudRoot = document.getElementById('hud') as HTMLElement
 
 const flags = readFlags()
@@ -48,10 +51,14 @@ function applyConfig(next: EffectConfig): void {
   state.setConfig(cfg)
 }
 
-let tier: Tier = TIERS.mid
+let tier: Tier = flags.tier ? TIERS[flags.tier] : TIERS.mid
 const effects = new Effects(canvas, cfg, tier)
 const state = new ExpressionState(cfg)
 const face = new FaceTracker()
+// 人像分割：遮挡（雨在人身后）+ 像素级碰撞。只在中/高档开，低档退回头部椭圆。
+const person = new PersonMask(camFront)
+let segEvery = 6
+let segOn = false
 
 let stream: MediaStream | null = null
 let cameraOn = false
@@ -92,6 +99,7 @@ Object.assign(window, {
     getConfig: () => cfg,
     setConfig: (next: EffectConfig) => applyConfig(next),
     getTier: () => effects.currentTier.name,
+    person, // 调试用：可以从控制台喂一张假遮罩验证碰撞与遮挡链路
   },
 })
 
@@ -134,6 +142,22 @@ function resize(): void {
   h = window.innerHeight
   const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR)
   effects.resize(w, h, dpr)
+  person.setView(video.videoWidth, video.videoHeight, w, h)
+}
+
+/** 分割按档位开关：high 每 4 帧（≈15 Hz），mid 每 6 帧（≈10 Hz），low 关。 */
+function applySegTier(): void {
+  const want = cameraOn && flags.seg && tier.name !== 'low'
+  segEvery = tier.name === 'high' ? 4 : 6
+  if (want && !segOn) {
+    segOn = true
+    effects.setRainLayer(rainCanvas)
+    void person.init()
+  } else if (!want && segOn) {
+    segOn = false
+    person.stop()
+    effects.setRainLayer(null)
+  }
 }
 
 /**
@@ -154,6 +178,9 @@ async function connect(fromStart: boolean): Promise<void> {
   try {
     stream = await startCamera(video)
     cameraOn = true
+    camFront.srcObject = stream
+    void camFront.play().catch(() => {})
+    person.setView(video.videoWidth, video.videoHeight, w, h)
   } catch (e) {
     const kind =
       e instanceof CameraError_
@@ -193,6 +220,7 @@ async function connect(fromStart: boolean): Promise<void> {
   inScene = true
   hud.hideStart()
   hud.showControls({ camera: true, clean: flags.clean })
+  applySegTier()
   startLoop()
 }
 
@@ -210,7 +238,9 @@ function exitToStart(): void {
   stopCamera(stream)
   stream = null
   video.srcObject = null
+  camFront.srcObject = null
   cameraOn = false
+  applySegTier()
   inScene = false
   effects.clear()
   effects.setRainRate(0)
@@ -271,6 +301,7 @@ let upTimer = 0
 
 function sampleTier(frameMs: number, dt: number): void {
   emaFrame += (frameMs - emaFrame) * 0.05
+  if (flags.tier) return // 钉住档位时不自适应
 
   if (!warmedUp) {
     warmup += dt
@@ -299,6 +330,7 @@ function setTier(next: Tier): void {
   if (next.name === tier.name) return
   tier = next
   effects.setTier(next)
+  applySegTier()
 }
 
 // ---------- 主循环 ----------
@@ -311,10 +343,11 @@ function loop(now: number): void {
   last = now
   frame++
 
-  // 1. 降频检测
+  // 1. 降频检测（表情每 3 帧；人像分割每 4–6 帧，且在 Worker 里，不会卡这条线程）
   if (cameraOn && face.ready && frame % DETECT_EVERY === 0) {
     face.detect(video, w, h)
   }
+  if (segOn && frame % segEvery === 0) person.request(video, now)
 
   // 2. 信号采样（含 EMA 平滑与头部插值）
   const sig = face.sample(dt)
@@ -331,10 +364,11 @@ function loop(now: number): void {
 
   // 5. 物理 + 碰撞（每帧）
   const head = cameraOn ? sig.head : testHeadOn && cfg.showDebug ? testHead : null
-  effects.update(dt, head)
+  const usePerson = segOn && person.active
+  effects.update(dt, head, usePerson ? person : null)
 
-  // 6. 绘制
-  effects.draw(head)
+  // 6. 绘制（人像模式下头部脉冲那圈椭圆没有意义，不画）
+  effects.draw(usePerson ? null : head)
   if (cfg.showDebug && head) effects.drawDebugHead(head)
 
   // 7. HUD
@@ -394,6 +428,7 @@ function updateHud(sig: ReturnType<FaceTracker['sample']>, now: number): void {
         `fps       ${(1000 / emaFrame).toFixed(0)}   frame ${emaFrame.toFixed(1)}ms`,
         `detect    ${face.lastDetectMs.toFixed(1)}ms (${face.delegate}, 每 ${DETECT_EVERY} 帧)`,
         `assets    ${face.assetSource}   headRot ${face.headRotDeg.toFixed(1)}°`,
+        `person    ${segOn ? (person.active ? `on ${person.lastMs.toFixed(0)}ms (${person.delegate}, 每 ${segEvery} 帧) ${person.mw}x${person.mh}` : person.ready ? 'ready' : person.lastError ? `fail ${person.lastError}` : 'loading') : person.lastError ? `fail ${person.lastError}` : 'off'}`,
         `tier      ${tier.name}   rain ${s.rainAlive}   spark ${s.sparkAlive}   rocket ${s.rocketAlive}`,
         `collide   ${s.collisions}/frame`,
       ].join('\n'),

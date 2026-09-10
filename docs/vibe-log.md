@@ -117,6 +117,33 @@ CSS 层面的「不可见的拦截」既不报错、也不在截图里留痕，
 
 ---
 
-## 06 ·（待填）
+## 06 · 三份调研报告里的 Worker 示例，在 Vite 里一个都跑不起来
 
-<!-- 接下来在 Cursor 里遇到的错误往这里记。常见候选见 TODO-for-cursor.md 底部的表格。 -->
+**现象**　让三个 AI 分别调研「MediaPipe ImageSegmenter 放进 Web Worker」，三份报告都给了
+「可运行最小示例」，写法一致：`importScripts(...)` 或直接 `import` vision_bundle。
+搬进项目，Worker 一启动就报 `ModuleFactory not set.`。
+
+**原因**　Vite 只能可靠打包**模块** Worker；MediaPipe 在 Worker 里用 `importScripts` 加载 wasm 胶水，
+模块 Worker 里它抛 TypeError，MediaPipe 退回 dynamic import——但胶水文件里 `var ModuleFactory`
+是模块作用域的，挂不到 `self` 上。三份报告都是从「独立 HTML 页面」的语境里抄的，
+没有一份考虑过构建工具。**调研得再多，也替代不了在自己的构建链里跑一次。**
+
+**纠偏**　自己 fetch 胶水文本、在全局作用域执行一次把 `ModuleFactory` 挂上，
+并且每次建图前都重挂一次（MediaPipe 建完图会把它用掉，GPU 失败退 CPU 时会再报一次）。
+
+---
+
+## 07 · 头部碰撞体在手机上被横向压扁——桌面上完全看不出来
+
+**现象**　Yuqing 反馈「碰撞不准」。桌面测试一切正常。
+
+**原因**　`x_px = (1 - x) * width` 这条映射假设视频铺满屏幕；实际 `<video>` 是 `object-fit: cover`，
+640×480 放到 390×844 会按高度放大 1.76 倍、左右各裁掉约 370 px。
+桌面窗口比例接近 4:3，误差极小；手机竖屏上碰撞体的宽度只有真实脸宽的一半多。
+AI 写这行代码时给了注释「前置镜像」，看起来考虑周全，其实少了一半的换算。
+
+**纠偏**　抽出 `view.ts` 统一做 cover + 镜像的双向映射，face 与 segment 共用。
+
+---
+
+## 08 ·（待填）
