@@ -111,7 +111,7 @@ window.addEventListener('orientationchange', () => setTimeout(resize, 250))
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     running = false
-  } else if (!running && !idlePaused) {
+  } else if (!running && !idlePaused && inScene) {
     face.resetClock()
     last = 0
     startLoop()
