@@ -300,6 +300,9 @@ let downTimer = 0
 let upTimer = 0
 
 function sampleTier(frameMs: number, dt: number): void {
+  // 首次检测要编译 GPU shader，单帧能卡 300–800 ms；这种一次性尖峰不代表设备性能，
+  // 进了 EMA 会把一台 4 ms/帧 的电脑判成 low 档（真实发生过）。尖峰不计入。
+  if (frameMs > 80) return
   emaFrame += (frameMs - emaFrame) * 0.05
   if (flags.tier) return // 钉住档位时不自适应
 
@@ -319,7 +322,7 @@ function sampleTier(frameMs: number, dt: number): void {
     downTimer = 0
     if (tier.name === 'high') setTier(TIERS.mid)
     else if (tier.name === 'mid') setTier(TIERS.low)
-  } else if (upTimer >= 10) {
+  } else if (upTimer >= 5) {
     upTimer = 0
     if (tier.name === 'low') setTier(TIERS.mid)
     else if (tier.name === 'mid') setTier(TIERS.high)
