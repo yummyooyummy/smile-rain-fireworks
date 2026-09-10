@@ -117,8 +117,9 @@ export class PersonMask implements PersonCollider {
     this.busy = true
     createImageBitmap(video, { resizeWidth: SEND_W, resizeHeight: SEND_H, resizeQuality: 'low' })
       .then((bmp) => this.worker?.postMessage({ type: 'seg', bmp, ts }, [bmp]))
-      .catch(() => {
+      .catch((err) => {
         this.busy = false
+        this.lastError = String(err instanceof Error ? err.message : err).slice(0, 120)
       })
   }
 
