@@ -173,6 +173,42 @@ body {
   outline-offset: 3px;
 }
 
+/* ---------- 开始页：加载进度 ---------- */
+
+/* 模型 4MB，国内网络下可能十几秒。没有进度条，用户分不清「在下载」和「卡死」。 */
+.load {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.load-bar {
+  width: 180px;
+  height: 3px;
+  border-radius: 3px;
+  background: rgba(245, 237, 230, 0.18);
+  overflow: hidden;
+}
+
+.load-bar i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 0.2s ease-out;
+  background: linear-gradient(90deg, var(--accent), var(--gold));
+}
+
+.load-text {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---------- 引导：提示文字 + 其下的进度条 ---------- */
 
 .guide {
@@ -249,6 +285,75 @@ body {
   font-size: 0.82rem;
   color: var(--ink);
   white-space: nowrap;
+}
+
+/* ---------- 手动模式横幅 ---------- */
+
+/* 手动模式必须自报家门，并且给一条回到摄像头模式的路——
+   否则用户只会觉得「表情识别坏了」，然后关掉页面。 */
+.banner {
+  position: absolute;
+  left: 50%;
+  top: calc(22px + env(safe-area-inset-top, 0px));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 32px);
+  padding: 7px 8px 7px 14px;
+  border-radius: 999px;
+  background: rgba(20, 16, 15, 0.66);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+  font-size: 0.82rem;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.banner-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  flex: none;
+}
+
+.banner-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.banner-btn {
+  flex: none;
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(245, 237, 230, 0.08);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.banner-btn:hover {
+  background: rgba(245, 237, 230, 0.16);
+}
+
+.banner-btn:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.banner-btn:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+@media (max-width: 420px) {
+  .banner {
+    font-size: 0.76rem;
+    padding-left: 12px;
+  }
 }
 
 /* ---------- 手动触发 ---------- */

@@ -20,6 +20,39 @@ const CDN_WASM_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.
 const CDN_MODEL =
   'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task'
 
+export type ModelProgress = (loaded: number, total: number) => void
+
+/**
+ * 自己把模型下下来，而不是把 URL 交给 MediaPipe。
+ * 唯一的原因是**进度**：交给 MediaPipe 就拿不到下载进度，
+ * 4 MB 在慢网下要十几秒，用户区分不了「在下载」和「已经挂了」。
+ * 拿到 Uint8Array 后走 baseOptions.modelAssetBuffer，行为完全等价。
+ */
+async function fetchModel(url: string, onProgress?: ModelProgress): Promise<Uint8Array> {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`model HTTP ${res.status}`)
+  const total = Number(res.headers.get('content-length')) || 0
+  if (!res.body) return new Uint8Array(await res.arrayBuffer())
+
+  const reader = res.body.getReader()
+  const chunks: Uint8Array[] = []
+  let loaded = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    chunks.push(value)
+    loaded += value.length
+    onProgress?.(loaded, total)
+  }
+  const out = new Uint8Array(loaded)
+  let off = 0
+  for (const c of chunks) {
+    out.set(c, off)
+    off += c.length
+  }
+  return out
+}
+
 async function exists(url: string): Promise<boolean> {
   try {
     const res = await fetch(url, { method: 'HEAD' })
@@ -188,30 +221,30 @@ export class FaceTracker {
   /** 资源来源，写进调试面板方便排查「为什么加载不出来」 */
   assetSource: 'local' | 'cdn' = 'local'
 
-  async init(): Promise<void> {
+  async init(onProgress?: ModelProgress): Promise<void> {
     const localOk = await exists(`${LOCAL_WASM_BASE}/vision_wasm_internal.js`)
     const wasmBase = localOk ? LOCAL_WASM_BASE : CDN_WASM_BASE
     const modelUrl = (await exists(LOCAL_MODEL)) ? LOCAL_MODEL : CDN_MODEL
     this.assetSource = localOk ? 'local' : 'cdn'
     const vision = await FilesetResolver.forVisionTasks(wasmBase)
-    try {
-      this.landmarker = await FaceLandmarker.createFromOptions(vision, {
-        baseOptions: { modelAssetPath: modelUrl, delegate: 'GPU' },
-        runningMode: 'VIDEO',
+    const buf = await fetchModel(modelUrl, onProgress)
+
+    const opts = (delegate: 'GPU' | 'CPU') =>
+      ({
+        // 每次都给一份拷贝：MediaPipe 会接管这块 buffer，回退重试时原来那份可能已经不可用
+        baseOptions: { modelAssetBuffer: buf.slice(), delegate },
+        runningMode: 'VIDEO' as const,
         numFaces: 1,
         outputFaceBlendshapes: true,
         outputFacialTransformationMatrixes: true,
-      })
+      }) as const
+
+    try {
+      this.landmarker = await FaceLandmarker.createFromOptions(vision, opts('GPU'))
       this.delegate = 'GPU'
     } catch {
       // GPU delegate 在部分 iOS / 老安卓上会失败，回退 CPU 而不是让页面挂掉
-      this.landmarker = await FaceLandmarker.createFromOptions(vision, {
-        baseOptions: { modelAssetPath: modelUrl, delegate: 'CPU' },
-        runningMode: 'VIDEO',
-        numFaces: 1,
-        outputFaceBlendshapes: true,
-        outputFacialTransformationMatrixes: true,
-      })
+      this.landmarker = await FaceLandmarker.createFromOptions(vision, opts('CPU'))
       this.delegate = 'CPU'
     }
   }

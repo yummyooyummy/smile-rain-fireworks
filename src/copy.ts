@@ -6,8 +6,12 @@ export const copy = {
     title: '笑一下，屏幕会开花',
     subtitle: '微笑会下雨，大笑会放烟花。需要打开摄像头，画面只在本机处理，不会上传。',
     button: '开始',
-    loading: '正在准备摄像头与模型…',
+    loading: '正在准备…',
     privacy: '所有画面处理都在你的浏览器里完成',
+    // 加载分三段，用户要知道现在卡在哪一段——「正在准备」什么都没说
+    stageCamera: '正在请求摄像头权限…',
+    stageModel: '正在加载识别模型',
+    stageWarmup: '正在启动识别…',
   },
   guide: {
     step1: '对着镜头微笑，雨就会落下来',
@@ -21,6 +25,12 @@ export const copy = {
     share: '分享截图',
     shareTitle: '笑雨烟花',
   },
+  manual: {
+    // 手动模式必须自己说出来自己是手动模式，否则用户会以为是识别坏了
+    banner: '手动模式 · 表情识别未开启',
+    reconnect: '重新连接摄像头',
+    connecting: '正在连接…',
+  },
   status: {
     noFace: '把脸放进画面里',
     lowLight: '光线有点暗，换个亮一点的地方',
@@ -29,11 +39,14 @@ export const copy = {
   error: {
     denied: '没有拿到摄像头权限',
     deniedHint:
-      '在浏览器地址栏左侧的站点设置里允许摄像头，然后刷新页面。也可以用右下角按钮手动触发特效。',
+      '在浏览器地址栏左侧的站点设置里允许摄像头，然后点重试。也可以用右下角按钮手动触发特效。',
     unsupported: '这个浏览器不支持摄像头',
     unsupportedHint: '请用最新版 Chrome、Safari 或 Edge 打开。',
+    timeout: '摄像头一直没有响应',
+    timeoutHint:
+      '可能是权限弹窗没弹出来，或者摄像头正被其它程序占用。关掉视频会议、相机类应用后点重试。',
     modelFail: '模型加载失败',
-    modelFailHint: '检查网络后刷新。仍可用右下角按钮体验特效。',
+    modelFailHint: '检查网络后点重试。仍可用右下角按钮体验特效。',
     retry: '重试',
     fallback: '先用手动模式体验',
   },

@@ -11,6 +11,8 @@ export interface HudCallbacks {
   onManualHold: () => void
   onGearClick: () => void
   onFallback: () => void
+  /** 重试 / 重新连接摄像头：重跑一次授权与模型初始化，不刷新页面 */
+  onReconnect: () => void
 }
 
 const HOLD_DELAY = 350
@@ -22,6 +24,11 @@ export class Hud {
 
   private startPage!: HTMLElement
   private startBtn!: HTMLButtonElement
+  private loadWrap!: HTMLElement
+  private loadFill!: HTMLElement
+  private loadText!: HTMLElement
+  private banner!: HTMLElement
+  private bannerBtn!: HTMLButtonElement
   private guideWrap!: HTMLElement
   private guideText!: HTMLElement
   private guideBar!: HTMLElement
@@ -55,6 +62,10 @@ export class Hud {
           <h1 class="start-title">${copy.start.title}</h1>
           <p class="start-sub">${copy.start.subtitle}</p>
           <button class="btn-primary" id="startBtn">${copy.start.button}</button>
+          <div class="load" id="loadWrap" hidden>
+            <div class="load-bar"><i id="loadFill"></i></div>
+            <p class="load-text" id="loadText"></p>
+          </div>
           <p class="start-privacy">${copy.start.privacy}</p>
         </div>
       </div>
@@ -62,6 +73,12 @@ export class Hud {
       <div class="guide" id="guideWrap" hidden>
         <p class="guide-text" id="guideText"></p>
         <div class="guide-bar" id="guideBar"><i id="guideFill"></i></div>
+      </div>
+
+      <div class="banner" id="banner" hidden>
+        <span class="banner-dot" aria-hidden="true"></span>
+        <span class="banner-text">${copy.manual.banner}</span>
+        <button class="banner-btn" id="reconnectBtn">${copy.manual.reconnect}</button>
       </div>
 
       <p class="status" id="statusEl" hidden></p>
@@ -95,6 +112,11 @@ export class Hud {
 
     this.startPage = $('startPage')
     this.startBtn = $('startBtn')
+    this.loadWrap = $('loadWrap')
+    this.loadFill = $('loadFill')
+    this.loadText = $('loadText')
+    this.banner = $('banner')
+    this.bannerBtn = $('reconnectBtn')
     this.guideWrap = $('guideWrap')
     this.guideText = $('guideText')
     this.guideBar = $('guideBar')
@@ -108,6 +130,7 @@ export class Hud {
 
     this.startBtn.addEventListener('click', () => this.cb.onStart())
     this.gearBtn.addEventListener('click', () => this.cb.onGearClick())
+    this.bannerBtn.addEventListener('click', () => this.cb.onReconnect())
     this.shareBtn.addEventListener('click', () => void this.shareFrame())
     this.bindManual()
   }
@@ -148,6 +171,23 @@ export class Hud {
   setLoading(on: boolean): void {
     this.startBtn.disabled = on
     this.startBtn.textContent = on ? copy.start.loading : copy.start.button
+    if (!on) this.setLoadingStage(null, 0)
+  }
+
+  /**
+   * 加载进度。模型 4MB，国内网络下可能要十几秒——没有进度条时用户只会看到
+   * 一个禁用的按钮，分不清「在加载」和「卡死了」，多半会刷新，然后重新等一遍。
+   * pct 为 undefined 表示这一段拿不到 content-length，只显示文字不显示百分比。
+   */
+  setLoadingStage(text: string | null, progress: number, pct?: number): void {
+    if (text === null) {
+      this.loadWrap.hidden = true
+      return
+    }
+    this.loadWrap.hidden = false
+    const label = pct === undefined ? text : `${text} ${pct}%`
+    if (this.loadText.textContent !== label) this.loadText.textContent = label
+    this.loadFill.style.transform = `scaleX(${Math.max(0, Math.min(1, progress))})`
   }
 
   hideStart(): void {
@@ -163,6 +203,17 @@ export class Hud {
     this.manualBtn.hidden = false
     this.gearBtn.hidden = !opts.gear
     this.shareBtn.hidden = !this.hasCamera()
+  }
+
+  /** 手动模式横幅：明确告诉用户表情识别没开，并给一条回到正常路径的出口。 */
+  showManualBanner(on: boolean): void {
+    this.banner.hidden = !on
+    this.setReconnecting(false)
+  }
+
+  setReconnecting(on: boolean): void {
+    this.bannerBtn.disabled = on
+    this.bannerBtn.textContent = on ? copy.manual.connecting : copy.manual.reconnect
   }
 
   private hasCamera(): boolean {
@@ -261,10 +312,11 @@ export class Hud {
 
   // ---------- 错误页 ----------
 
-  showError(kind: 'denied' | 'unsupported' | 'modelFail'): void {
+  showError(kind: 'denied' | 'unsupported' | 'timeout' | 'modelFail'): void {
     const map = {
       denied: [copy.error.denied, copy.error.deniedHint],
       unsupported: [copy.error.unsupported, copy.error.unsupportedHint],
+      timeout: [copy.error.timeout, copy.error.timeoutHint],
       modelFail: [copy.error.modelFail, copy.error.modelFailHint],
     } as const
     const [title, hint] = map[kind]
@@ -278,7 +330,11 @@ export class Hud {
           <button class="btn-primary" id="errFallback">${copy.error.fallback}</button>
         </div>
       </div>`
-    this.errorPage.querySelector('#errRetry')?.addEventListener('click', () => location.reload())
+    // 重试不刷新页面：刷新会把模型重新下一遍，国内网络下等于把用户再关十几秒。
+    this.errorPage.querySelector('#errRetry')?.addEventListener('click', () => {
+      this.errorPage.hidden = true
+      this.cb.onReconnect()
+    })
     this.errorPage.querySelector('#errFallback')?.addEventListener('click', () => {
       this.errorPage.hidden = true
       this.cb.onFallback()

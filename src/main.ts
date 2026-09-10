@@ -66,7 +66,7 @@ let guideDone = false
 let guideDoneAt = 0
 
 const hud = new Hud(hudRoot, {
-  onStart: () => void boot(),
+  onStart: () => void connect(true),
   onManualTap: () => state.forceRain(3),
   onManualHold: () => {
     state.forceBurst()
@@ -76,10 +76,9 @@ const hud = new Hud(hudRoot, {
     window.dispatchEvent(new CustomEvent('open-drawer'))
   },
   onFallback: () => {
-    cameraOn = false
-    hud.showControls({ gear: !flags.clean })
-    startLoop()
+    enterManualMode()
   },
+  onReconnect: () => void connect(false),
 })
 
 // 供抽屉读写配置的最小接口，避免 Cursor 改动引擎内部
@@ -132,29 +131,80 @@ function resize(): void {
   effects.resize(w, h, dpr)
 }
 
-async function boot(): Promise<void> {
-  hud.setLoading(true)
+/**
+ * 授权 → 模型 → 开跑。这条链路上每一步都可能失败，所以它必须能被重复调用：
+ * 用户在错误页点「重试」、在手动模式横幅点「重新连接摄像头」，走的都是这里，
+ * 而不是 location.reload()——刷新会把 4MB 模型重新下一遍。
+ */
+let connecting = false
+
+async function connect(fromStart: boolean): Promise<void> {
+  if (connecting) return
+  connecting = true
+  if (fromStart) hud.setLoading(true)
+  hud.setReconnecting(true)
+  hud.setLoadingStage(copy.start.stageCamera, 0.05)
+
   try {
     stream = await startCamera(video)
     cameraOn = true
   } catch (e) {
-    hud.setLoading(false)
-    hud.hideStart()
-    hud.showError(e instanceof CameraError_ && e.kind === 'denied' ? 'denied' : 'unsupported')
+    const kind =
+      e instanceof CameraError_
+        ? e.kind === 'denied'
+          ? 'denied'
+          : e.kind === 'timeout'
+            ? 'timeout'
+            : 'unsupported'
+        : 'unsupported'
+    fail(kind)
     return
   }
 
-  try {
-    await face.init()
-  } catch {
-    hud.setLoading(false)
-    hud.hideStart()
-    hud.showError('modelFail')
-    return
+  // 模型只初始化一次：摄像头失败后重连时，模型往往已经在内存里了，不必再下一遍
+  if (!face.ready) {
+    try {
+      hud.setLoadingStage(copy.start.stageModel, 0.2)
+      await face.init((loaded, total) => {
+        if (total > 0) {
+          const p = loaded / total
+          hud.setLoadingStage(copy.start.stageModel, 0.2 + 0.7 * p, Math.round(p * 100))
+        } else {
+          hud.setLoadingStage(copy.start.stageModel, 0.5)
+        }
+      })
+    } catch {
+      stopCamera(stream)
+      stream = null
+      cameraOn = false
+      fail('modelFail')
+      return
+    }
   }
 
+  hud.setLoadingStage(copy.start.stageWarmup, 1)
+  face.resetClock()
+  connecting = false
   hud.setLoading(false)
   hud.hideStart()
+  hud.showManualBanner(false)
+  hud.showControls({ gear: !flags.clean })
+  startLoop()
+}
+
+function fail(kind: 'denied' | 'unsupported' | 'timeout' | 'modelFail'): void {
+  connecting = false
+  hud.setLoading(false)
+  hud.setLoadingStage(null, 0)
+  hud.setReconnecting(false)
+  hud.hideStart()
+  hud.showError(kind)
+}
+
+/** 没有摄像头也必须能玩。但要让用户知道自己在手动模式，并给一条回去的路。 */
+function enterManualMode(): void {
+  cameraOn = false
+  hud.showManualBanner(true)
   hud.showControls({ gear: !flags.clean })
   startLoop()
 }
