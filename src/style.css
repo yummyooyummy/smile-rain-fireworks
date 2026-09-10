@@ -201,11 +201,23 @@ body {
 }
 
 .guide-bar {
+  position: relative;
   width: 160px;
   height: 3px;
   border-radius: 3px;
   background: rgba(245, 237, 230, 0.18);
   overflow: hidden;
+}
+
+/* 50% 处的刻度：左半段是「笑到位」，右半段是「张嘴到位」 */
+.guide-bar::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  width: 1px;
+  height: 7px;
+  background: rgba(245, 237, 230, 0.45);
 }
 
 .guide-bar i {
@@ -311,11 +323,23 @@ body {
   height: 36px;
   border-radius: 50%;
   border: 1px solid var(--line);
-  background: rgba(20, 16, 15, 0.45);
+  background: rgba(20, 16, 15, 0.62);
   backdrop-filter: blur(8px);
-  color: var(--muted);
-  font-size: 1rem;
+  color: var(--ink);
+  display: grid;
+  place-items: center;
   cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    background 0.2s ease;
+}
+
+.gear:hover {
+  background: rgba(20, 16, 15, 0.82);
+}
+
+.gear:active {
+  transform: scale(0.92);
 }
 
 /* ---------- 错误页 ---------- */

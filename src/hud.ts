@@ -78,7 +78,14 @@ export class Hud {
         </svg>
       </button>
 
-      <button class="gear" id="gearBtn" aria-label="${copy.hud.gear}" hidden>◔</button>
+      <button class="gear" id="gearBtn" aria-label="${copy.hud.gear}" title="${copy.hud.gear}" hidden>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+          <line x1="4" y1="7" x2="20" y2="7" /><circle cx="9" cy="7" r="2.4" fill="currentColor" stroke="none" />
+          <line x1="4" y1="12" x2="20" y2="12" /><circle cx="15" cy="12" r="2.4" fill="currentColor" stroke="none" />
+          <line x1="4" y1="17" x2="20" y2="17" /><circle cx="11" cy="17" r="2.4" fill="currentColor" stroke="none" />
+        </svg>
+      </button>
 
       <div class="error" id="errorPage" hidden></div>
 

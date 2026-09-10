@@ -177,19 +177,23 @@ export class ExpressionState {
     const diff = target - this.rainRate
     this.rainRate += Math.abs(diff) <= speed ? diff : Math.sign(diff) * speed
 
-    // ---- 引导进度条 ----
+    // ---- 引导进度条：一条连续刻度，前半段是「笑」后半段是「张嘴」----
+    //
+    // 早期版本在进入 Smiling 的瞬间把进度条从「微笑进度」换成「大笑进度」，
+    // 于是用户看到的是「涨到满 → 立刻归零」，而他其实一直在笑。
+    // 进度条中途改变含义，用户是无法理解的。
+    // 现在整条是同一把尺子：0→50% 由微笑推进，50%→100% 由张嘴推进，
+    // 持续微笑时它稳定停在 50% 附近，不会归零。
+    const seg1 = 0.5 * Math.min(1, sig.smile / c.smileEnter)
     if (this.mode === 'laughing') {
-      this.guidePhase = 'none'
+      this.guidePhase = 'laugh'
       this.guideProgress = 1
     } else if (this.mode === 'smiling') {
       this.guidePhase = 'laugh'
-      this.guideProgress = Math.min(
-        1,
-        Math.min(sig.smile / c.laughSmile, sig.jawOpen / c.laughJaw),
-      )
+      this.guideProgress = seg1 + 0.5 * Math.min(1, sig.jawOpen / c.laughJaw)
     } else {
       this.guidePhase = 'smile'
-      this.guideProgress = Math.min(1, sig.smile / c.smileEnter)
+      this.guideProgress = seg1
     }
   }
 
