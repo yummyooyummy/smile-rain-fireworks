@@ -307,6 +307,9 @@ export class Effects {
 
   private acquireSpark(): number {
     const cap = Math.min(this.sparkCap, this.tier.sparkPool)
+    // 池满时提前返回。否则每次发射都要把整个池扫一遍才发现没位置，
+    // 满负荷下就是每帧几万次空转。
+    if (this.sparkAlive >= cap) return -1
     for (let n = 0; n < cap; n++) {
       const i = this.sparkCursor
       this.sparkCursor = (this.sparkCursor + 1) % cap
@@ -321,7 +324,7 @@ export class Effects {
 
   private acquireRain(): number {
     const cap = Math.min(this.rainCap, Math.round(this.tier.rainMax * this.cfg.rainMax))
-    if (cap <= 0) return -1
+    if (cap <= 0 || this.rainAlive >= cap) return -1
     for (let n = 0; n < cap; n++) {
       const i = this.rainCursor
       this.rainCursor = (this.rainCursor + 1) % cap
@@ -359,6 +362,7 @@ export class Effects {
     // --- 雨：按 rainRate 生成 ---
     const targetRate = this.rainRate * this.tier.rainMax * this.cfg.rainMax * 1.6 // 每秒生成数
     this.rainBudget += targetRate * dt
+    if (this.rainBudget > 60) this.rainBudget = 60 // 配额封顶，避免掉帧后一次性喷一大坨
     while (this.rainBudget >= 1) {
       this.rainBudget -= 1
       this.spawnRain()
