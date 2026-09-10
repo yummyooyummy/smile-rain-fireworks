@@ -113,14 +113,3 @@ export function readConfigOverride(search = location.search): Partial<EffectConf
     return {}
   }
 }
-
-export async function loadConfig(): Promise<EffectConfig> {
-  let base: EffectConfig = { ...DEFAULT_CONFIG }
-  try {
-    const res = await fetch('effect.json', { cache: 'no-cache' })
-    if (res.ok) base = { ...base, ...(await res.json()) }
-  } catch {
-    /* 用默认值 */
-  }
-  return { ...base, ...readConfigOverride() }
-}
