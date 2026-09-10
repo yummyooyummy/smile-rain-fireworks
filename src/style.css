@@ -800,15 +800,18 @@ body {
 }
 
 @media (max-width: 640px) {
+  /* 60vh 在 640 高的小屏上会盖过画面竖直中点，也就是人脸所在的那一块——
+     而调阈值这件事恰恰要求你一边对着镜头笑一边拖滑块。所以卡死在中点以上。
+     内容放不下由 .drawer-body 自己滚。 */
   .drawer {
     left: 0;
     right: 0;
     bottom: 0;
-    max-height: 60vh;
+    max-height: calc(50vh - 12px);
   }
 
   .drawer-sheet {
-    max-height: 60vh;
+    max-height: calc(50vh - 12px);
     transform: translateY(100%);
     border-bottom: 0;
     border-radius: 16px 16px 0 0;
