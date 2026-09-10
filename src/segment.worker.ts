@@ -42,11 +42,15 @@ async function init(m: InitMsg): Promise<void> {
     await preloadGlue(m.wasmBase)
     const vision = await FilesetResolver.forVisionTasks(m.wasmBase)
     seg = await ImageSegmenter.createFromOptions(vision, opts('GPU'))
-  } catch {
+  } catch (gpuErr) {
     delegate = 'CPU'
-    await preloadGlue(m.wasmBase)
-    const vision = await FilesetResolver.forVisionTasks(m.wasmBase)
-    seg = await ImageSegmenter.createFromOptions(vision, opts('CPU'))
+    try {
+      await preloadGlue(m.wasmBase)
+      const vision = await FilesetResolver.forVisionTasks(m.wasmBase)
+      seg = await ImageSegmenter.createFromOptions(vision, opts('CPU'))
+    } catch (cpuErr) {
+      throw new Error(`${String(cpuErr)}; GPU: ${String(gpuErr)}`)
+    }
   }
   self.postMessage({ type: 'ready', delegate })
 }
