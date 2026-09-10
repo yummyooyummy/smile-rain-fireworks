@@ -12,8 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@mediapipe/tasks-vision": "1.0.1",
-    "playwright": "^1.63.0"
+    "@mediapipe/tasks-vision": "1.0.1"
   },
   "devDependencies": {
     "typescript": "^5.6.3",
