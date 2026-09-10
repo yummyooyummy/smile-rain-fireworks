@@ -19,12 +19,16 @@ export const copy = {
     step2: '再张开嘴大笑试试',
     step3: '摆摆头，让烟花撞到你',
     done: '玩法解锁了，尽情笑吧',
+    skip: '跳过',
   },
   hud: {
     manualHint: '点一下下雨 · 长按放烟花',
     gear: '调参',
     share: '分享截图',
     shareTitle: '笑雨烟花',
+    shared: '已分享',
+    downloaded: '截图已保存',
+    shareFail: '截图没成功，再试一次',
   },
   manual: {
     // 手动模式必须自己说出来自己是手动模式，否则用户会以为是识别坏了
@@ -36,6 +40,8 @@ export const copy = {
     noFace: '把脸放进画面里',
     lowLight: '光线有点暗，换个亮一点的地方',
     paused: '已暂停，回到页面后自动继续',
+    idleTitle: '一直没看到人，已经暂停了',
+    idleHint: '点一下继续',
   },
   error: {
     denied: '没有拿到摄像头权限',
@@ -74,6 +80,8 @@ export const copy = {
     exportJson: '导出 effect.json',
     exported: '已复制到剪贴板',
     reset: '恢复默认',
+    replayGuide: '重看新手引导',
+    close: '关闭',
     tier: '当前档位',
   },
 } as const

@@ -79,6 +79,18 @@ const hud = new Hud(hudRoot, {
     enterManualMode()
   },
   onReconnect: () => void connect(false),
+  onSkipGuide: () => {
+    guideDone = true
+    guideDoneAt = 0
+  },
+  onResume: () => resumeFromIdle(),
+})
+
+// 抽屉里的「重看新手引导」
+window.addEventListener('replay-guide', () => {
+  state.resetGuide()
+  guideDone = false
+  guideDoneAt = 0
 })
 
 // 供抽屉读写配置的最小接口，避免 Cursor 改动引擎内部
@@ -97,7 +109,7 @@ window.addEventListener('orientationchange', () => setTimeout(resize, 250))
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     running = false
-  } else if (!running) {
+  } else if (!running && !idlePaused) {
     face.resetClock()
     last = 0
     startLoop()
@@ -183,6 +195,9 @@ async function connect(fromStart: boolean): Promise<void> {
   }
 
   hud.setLoadingStage(copy.start.stageWarmup, 1)
+  idlePaused = false
+  noFaceMs = 0
+  hud.showPaused(false)
   face.resetClock()
   connecting = false
   hud.setLoading(false)
@@ -201,9 +216,38 @@ function fail(kind: 'denied' | 'unsupported' | 'timeout' | 'modelFail'): void {
   hud.showError(kind)
 }
 
+/**
+ * 长时间没人 → 停掉 rAF。手机上把这个页面开着不管，摄像头 + 每帧检测 + 粒子
+ * 会一直烧电；而且没人的时候这些计算一点用都没有。
+ * 只在有摄像头时启用——手动模式下「没有脸」是常态，不能因此把人踢停。
+ */
+const IDLE_PAUSE_MS = 60_000
+let noFaceMs = 0
+let idlePaused = false
+
+function pauseFromIdle(): void {
+  idlePaused = true
+  running = false
+  noFaceMs = 0
+  hud.showPaused(true)
+}
+
+function resumeFromIdle(): void {
+  if (!idlePaused) return
+  idlePaused = false
+  noFaceMs = 0
+  hud.showPaused(false)
+  face.resetClock()
+  last = 0
+  startLoop()
+}
+
 /** 没有摄像头也必须能玩。但要让用户知道自己在手动模式，并给一条回去的路。 */
 function enterManualMode(): void {
   cameraOn = false
+  idlePaused = false
+  noFaceMs = 0
+  hud.showPaused(false)
   hud.showManualBanner(true)
   hud.showControls({ gear: !flags.clean })
   startLoop()
@@ -292,6 +336,15 @@ function loop(now: number): void {
 
   // 7. HUD
   updateHud(sig, now)
+
+  // 7.5 空闲暂停
+  if (cameraOn) {
+    noFaceMs = sig.faceOk ? 0 : noFaceMs + dt * 1000
+    if (noFaceMs >= IDLE_PAUSE_MS) {
+      pauseFromIdle()
+      return
+    }
+  }
 
   // 8. 档位
   sampleTier(performance.now() - frameStart, dt)

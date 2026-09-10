@@ -257,6 +257,35 @@ body {
   text-shadow: 0 2px 14px rgba(0, 0, 0, 0.75);
 }
 
+.guide-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(90vw, 30rem);
+}
+
+.guide-skip {
+  flex: none;
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(20, 16, 15, 0.5);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.guide-skip:hover {
+  color: var(--ink);
+}
+
+.guide-skip:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
 .guide-bar {
   position: relative;
   width: 160px;
@@ -306,6 +335,66 @@ body {
   font-size: 0.82rem;
   color: var(--ink);
   white-space: nowrap;
+}
+
+/* ---------- 一次性提示 ---------- */
+
+.toast {
+  position: absolute;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  transform: translate(-50%, 6px);
+  margin: 0;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(20, 16, 15, 0.78);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+  font-size: 0.82rem;
+  color: var(--ink);
+  white-space: nowrap;
+  opacity: 0;
+  transition:
+    opacity 0.24s ease,
+    transform 0.24s ease;
+}
+
+.toast.is-on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* ---------- 空闲暂停 ---------- */
+
+/* 整块可点：暂停之后用户只需要「随便点一下」，不该再去找一个按钮。 */
+.paused {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  border: 0;
+  background: rgba(20, 16, 15, 0.72);
+  backdrop-filter: blur(6px);
+  color: var(--ink);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 3;
+}
+
+.paused-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.paused-hint {
+  font-size: 0.88rem;
+  color: var(--muted);
 }
 
 /* ---------- 手动模式横幅 ---------- */
@@ -568,6 +657,28 @@ body {
   transition: transform 0.28s ease;
 }
 
+.drawer-handle {
+  display: none;
+  padding: 10px 0 4px;
+  cursor: grab;
+  touch-action: none;
+  flex-shrink: 0;
+}
+
+.drawer-handle i {
+  display: block;
+  width: 36px;
+  height: 4px;
+  margin: 0 auto;
+  border-radius: 999px;
+  background: rgba(245, 237, 230, 0.28);
+}
+
+.drawer-replay {
+  align-self: stretch;
+  padding: 10px 16px;
+}
+
 .drawer-head {
   display: flex;
   align-items: center;
@@ -705,6 +816,27 @@ body {
 
   .drawer.is-open .drawer-sheet {
     transform: translateY(0);
+  }
+
+  .drawer-handle {
+    display: block;
+  }
+
+  .drawer-head {
+    padding-top: 4px;
+  }
+}
+
+/* 手机窄屏：引导带上「跳过」按钮之后就变成了可点区域，
+   而右下角的手动圆钮 + 分享钮正好压在同一条带上，会把「跳过」吃掉。
+   所以在窄屏把引导整体抬到控件上方，提示条再往上让一层。 */
+@media (max-width: 640px) {
+  .guide {
+    bottom: calc(94px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .toast {
+    bottom: calc(164px + env(safe-area-inset-bottom, 0px));
   }
 }
 

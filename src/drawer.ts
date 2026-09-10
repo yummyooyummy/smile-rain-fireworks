@@ -61,6 +61,7 @@ const sliderMarkup = SLIDERS.map(
 
 panel.innerHTML = `
   <div class="drawer-sheet">
+    <div class="drawer-handle" aria-hidden="true"><i></i></div>
     <header class="drawer-head">
       <h2 class="drawer-title">${copy.drawer.title}</h2>
       <button type="button" class="drawer-close" id="drawerClose" aria-label="${copy.drawer.title}">×</button>
@@ -75,6 +76,7 @@ panel.innerHTML = `
         <input type="checkbox" data-toggle="showDebug" />
         <span>${copy.drawer.showDebug}</span>
       </label>
+      <button type="button" class="btn-ghost drawer-replay" id="drawerReplay">${copy.drawer.replayGuide}</button>
       <button type="button" class="btn-ghost drawer-export" id="drawerExport">${copy.drawer.exportJson}</button>
       <p class="drawer-feedback" id="drawerFeedback" hidden></p>
       <p class="drawer-tier">${copy.drawer.tier} <span id="drawerTier"></span></p>
@@ -84,6 +86,9 @@ panel.innerHTML = `
 
 document.body.appendChild(panel)
 
+const sheet = panel.querySelector('.drawer-sheet') as HTMLElement
+const handle = panel.querySelector('.drawer-handle') as HTMLElement
+const replayBtn = panel.querySelector('#drawerReplay') as HTMLButtonElement
 const closeBtn = panel.querySelector('#drawerClose') as HTMLButtonElement
 const exportBtn = panel.querySelector('#drawerExport') as HTMLButtonElement
 const feedback = panel.querySelector('#drawerFeedback') as HTMLElement
@@ -95,6 +100,8 @@ let feedbackTimer = 0
 // 抽屉打开时往 history 里压一条，手机的返回手势/返回键就变成「关抽屉」而不是「离开页面」。
 // 不这么做，用户在手机上打开抽屉后返回，直接退出整个 demo，摄像头授权还得重来一遍。
 let pushed = false
+// 打开前谁有焦点，关上还给谁——键盘用户关掉抽屉后不该被丢回页面顶端
+let lastFocus: HTMLElement | null = null
 
 function syncFromConfig(): void {
   const fx = getFx()
@@ -132,15 +139,45 @@ function setOpen(next: boolean, fromPop = false): void {
   panel.classList.toggle('is-open', next)
   panel.setAttribute('aria-hidden', next ? 'false' : 'true')
   if (next) {
+    lastFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
     syncFromConfig()
+    window.setTimeout(() => closeBtn.focus({ preventScroll: true }), 60)
     if (tierTimer) window.clearInterval(tierTimer)
     tierTimer = window.setInterval(() => {
       const fx = getFx()
       if (fx) tierEl.textContent = fx.getTier()
     }, 500)
-  } else if (tierTimer) {
-    window.clearInterval(tierTimer)
-    tierTimer = 0
+  } else {
+    if (tierTimer) {
+      window.clearInterval(tierTimer)
+      tierTimer = 0
+    }
+    sheet.style.transform = ''
+    lastFocus?.focus({ preventScroll: true })
+    lastFocus = null
+  }
+}
+
+// ---------- 焦点陷阱 ----------
+// 抽屉是模态的：Tab 不该跑到它后面那层去，否则键盘用户会「掉出」抽屉，
+// 而背后那层此时是不可见也不该被操作的。
+const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+
+function trapTab(e: KeyboardEvent): void {
+  if (!open || e.key !== 'Tab') return
+  const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+    (el) => el.offsetParent !== null,
+  )
+  if (items.length === 0) return
+  const first = items[0]
+  const last = items[items.length - 1]
+  const active = document.activeElement
+  if (e.shiftKey && (active === first || !panel.contains(active))) {
+    e.preventDefault()
+    last.focus()
+  } else if (!e.shiftKey && active === last) {
+    e.preventDefault()
+    first.focus()
   }
 }
 
@@ -197,9 +234,70 @@ exportBtn.addEventListener('click', () => void exportConfig())
 
 window.addEventListener('open-drawer', () => setOpen(!open))
 
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && open) setOpen(false)
+replayBtn.addEventListener('click', () => {
+  window.dispatchEvent(new CustomEvent('replay-guide'))
+  setOpen(false)
 })
+
+// 点抽屉外面关闭。齿轮要排除掉，否则「点齿轮关闭」和「点外面关闭」会互相抵消。
+document.addEventListener(
+  'pointerdown',
+  (e) => {
+    if (!open) return
+    const t = e.target
+    if (!(t instanceof Node)) return
+    if (panel.contains(t)) return
+    if (t instanceof Element && t.closest('.gear')) return
+    setOpen(false)
+  },
+  true,
+)
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && open) {
+    setOpen(false)
+    return
+  }
+  trapTab(e)
+})
+
+// ---------- 手机：下拉把手关闭 ----------
+// 底部抽屉在手机上，最自然的关闭动作就是往下一划。没有它，唯一的出口是右上角
+// 那个 32px 的 ×，单手够不到。
+let dragY = 0
+let dragging = false
+
+handle.addEventListener('pointerdown', (e) => {
+  if (!open) return
+  dragging = true
+  dragY = e.clientY
+  handle.setPointerCapture(e.pointerId)
+  sheet.style.transition = 'none'
+})
+
+handle.addEventListener('pointermove', (e) => {
+  if (!dragging) return
+  const dy = Math.max(0, e.clientY - dragY)
+  sheet.style.transform = `translateY(${dy}px)`
+})
+
+const endDrag = (e: PointerEvent) => {
+  if (!dragging) return
+  dragging = false
+  handle.releasePointerCapture?.(e.pointerId)
+  sheet.style.transition = ''
+  const dy = Math.max(0, e.clientY - dragY)
+  // 划过 80px 或者划过自身高度的四分之一就算要关
+  if (dy > Math.min(80, sheet.getBoundingClientRect().height * 0.25)) {
+    sheet.style.transform = ''
+    setOpen(false)
+  } else {
+    sheet.style.transform = ''
+  }
+}
+
+handle.addEventListener('pointerup', endDrag)
+handle.addEventListener('pointercancel', endDrag)
 
 window.addEventListener('popstate', () => {
   if (open) setOpen(false, true)

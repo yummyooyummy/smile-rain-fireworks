@@ -73,6 +73,13 @@ export class ExpressionState {
   }
 
   /** 手动触发（右下角按钮 / 调试键盘）：绕过表情直接进模式 */
+  /** 重看引导：把三个「已经做到过」的标记清空，引导会从第一步重新走。 */
+  resetGuide(): void {
+    this.reachedSmile = false
+    this.reachedLaugh = false
+    this.reachedCollision = false
+  }
+
   forceRain(seconds = 3): void {
     this.manualRain = Math.max(this.manualRain, seconds)
   }

@@ -13,6 +13,8 @@ export interface HudCallbacks {
   onFallback: () => void
   /** 重试 / 重新连接摄像头：重跑一次授权与模型初始化，不刷新页面 */
   onReconnect: () => void
+  onSkipGuide: () => void
+  onResume: () => void
 }
 
 const HOLD_DELAY = 350
@@ -31,7 +33,11 @@ export class Hud {
   private banner!: HTMLElement
   private bannerBtn!: HTMLButtonElement
   private guideWrap!: HTMLElement
+  private guideRow!: HTMLElement
   private guideText!: HTMLElement
+  private guideSkip!: HTMLButtonElement
+  private toastEl!: HTMLElement
+  private pausedEl!: HTMLElement
   private guideBar!: HTMLElement
   private guideFill!: HTMLElement
   private statusEl!: HTMLElement
@@ -76,9 +82,19 @@ export class Hud {
       </div>
 
       <div class="guide" id="guideWrap" hidden>
-        <p class="guide-text" id="guideText"></p>
+        <div class="guide-row" id="guideRow">
+          <p class="guide-text" id="guideText"></p>
+          <button type="button" class="guide-skip" id="guideSkip">${copy.guide.skip}</button>
+        </div>
         <div class="guide-bar" id="guideBar"><i id="guideFill"></i></div>
       </div>
+
+      <p class="toast" id="toastEl" role="status" hidden></p>
+
+      <button type="button" class="paused" id="pausedEl" hidden>
+        <span class="paused-title">${copy.status.idleTitle}</span>
+        <span class="paused-hint">${copy.status.idleHint}</span>
+      </button>
 
       <div class="banner" id="banner" hidden>
         <span class="banner-dot" aria-hidden="true"></span>
@@ -124,7 +140,11 @@ export class Hud {
     this.banner = $('banner')
     this.bannerBtn = $('reconnectBtn')
     this.guideWrap = $('guideWrap')
+    this.guideRow = $('guideRow')
     this.guideText = $('guideText')
+    this.guideSkip = $('guideSkip')
+    this.toastEl = $('toastEl')
+    this.pausedEl = $('pausedEl')
     this.guideBar = $('guideBar')
     this.guideFill = $('guideFill')
     this.statusEl = $('statusEl')
@@ -138,6 +158,8 @@ export class Hud {
     this.gearBtn.addEventListener('click', () => this.cb.onGearClick())
     this.bannerBtn.addEventListener('click', () => this.cb.onReconnect())
     this.shareBtn.addEventListener('click', () => void this.shareFrame())
+    this.guideSkip.addEventListener('click', () => this.cb.onSkipGuide())
+    this.pausedEl.addEventListener('click', () => this.cb.onResume())
     this.bindManual()
     this.bindPreview()
   }
@@ -279,15 +301,20 @@ export class Hud {
     this.sharing = true
     try {
       const blob = await new Promise<Blob | null>((resolve) => off.toBlob(resolve, 'image/png'))
-      if (!blob) return
+      if (!blob) {
+        this.toast(copy.hud.shareFail)
+        return
+      }
       const file = new File([blob], 'smile-rain-fireworks.png', { type: 'image/png' })
       const payload = { files: [file], title: copy.hud.shareTitle }
       try {
         if (navigator.share && (!navigator.canShare || navigator.canShare(payload))) {
           await navigator.share(payload)
+          this.toast(copy.hud.shared)
           return
         }
       } catch (e) {
+        // 用户自己在系统面板里取消了，不是错误，也不该弹提示
         if (e instanceof DOMException && e.name === 'AbortError') return
       }
       const url = URL.createObjectURL(blob)
@@ -296,6 +323,7 @@ export class Hud {
       a.download = file.name
       a.click()
       URL.revokeObjectURL(url)
+      this.toast(copy.hud.downloaded)
     } finally {
       this.sharing = false
     }
@@ -317,11 +345,34 @@ export class Hud {
     this.guideWrap.hidden = false
     this.guideWrap.classList.remove('is-gone')
     // 空字符串 = 引导已走完，只保留进度条这个常驻反馈
-    this.guideText.hidden = text === ''
+    // 引导还在说话时才给「跳过」；只剩进度条时没有东西可跳
+    this.guideRow.hidden = text === ''
     if (text !== '' && this.guideText.textContent !== text) this.guideText.textContent = text
     this.guideBar.hidden = false
     this.guideBar.dataset.phase = phase
     this.guideFill.style.transform = `scaleX(${Math.max(0, Math.min(1, progress))})`
+  }
+
+  // ---------- 一次性提示 ----------
+
+  private toastTimer = 0
+
+  toast(text: string): void {
+    this.toastEl.hidden = false
+    this.toastEl.textContent = text
+    this.toastEl.classList.add('is-on')
+    if (this.toastTimer) window.clearTimeout(this.toastTimer)
+    this.toastTimer = window.setTimeout(() => {
+      this.toastEl.classList.remove('is-on')
+      this.toastTimer = window.setTimeout(() => {
+        this.toastEl.hidden = true
+      }, 300)
+    }, 1800)
+  }
+
+  /** 长时间没人 → 停掉检测和渲染。整块可点，点哪儿都能继续。 */
+  showPaused(on: boolean): void {
+    this.pausedEl.hidden = !on
   }
 
   // ---------- 状态提示 ----------
