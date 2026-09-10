@@ -4,7 +4,7 @@
 粒子落到头上会分裂成更小的火星向四周溅开。**
 纯前端、零服务端、零推理成本，PC 与手机浏览器直接打开。
 
-**[Live Demo](#)** ← 换成 Vercel 生产地址。
+**[Live Demo → smile.kkyq.hk.cn](https://smile.kkyq.hk.cn)**（国内直连；备用地址 [smile-rain-fireworks.vercel.app](https://smile-rain-fireworks.vercel.app)）
 
 <img src="docs/demo.gif" alt="15 秒演示：微笑下雨、大笑放烟花、粒子撞头分裂" width="480" />
 

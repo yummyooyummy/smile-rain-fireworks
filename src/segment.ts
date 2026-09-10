@@ -44,6 +44,12 @@ export class PersonMask implements PersonCollider {
   data: Uint8Array | null = null
   mw = 0
   mh = 0
+  /**
+   * 遮罩里「人」是哪个值。selfie_segmenter 的 categoryMask 实测是 0 = 人、1 = 背景，
+   * 和直觉相反，而且不同模型变体不一样。不猜：每帧看画面上沿和左右两边（几乎必然是背景）
+   * 哪个值占多数，那个就是背景，另一个就是人。
+   */
+  private personVal = 1
   ready = false
   delegate: 'GPU' | 'CPU' | '-' = '-'
   lastMs = 0
@@ -91,6 +97,7 @@ export class PersonMask implements PersonCollider {
       this.mw = m.w as number
       this.mh = m.h as number
       this.lastMs = m.ms as number
+      this.detectPolarity()
       this.updateCssMask()
     } else if (m.type === 'skip') {
       this.busy = false
@@ -123,6 +130,28 @@ export class PersonMask implements PersonCollider {
       })
   }
 
+  private detectPolarity(): void {
+    const d = this.data as Uint8Array
+    const { mw, mh } = this
+    let n = 0
+    let nonzero = 0
+    for (let x = 0; x < mw; x += 2) {
+      n++
+      if (d[x] > 0) nonzero++
+    }
+    for (let y = 0; y < mh; y += 2) {
+      n += 2
+      if (d[y * mw] > 0) nonzero++
+      if (d[y * mw + mw - 1] > 0) nonzero++
+    }
+    // 边缘大多数是非零 → 非零是背景 → 人是 0
+    this.personVal = nonzero * 2 > n ? 0 : 1
+  }
+
+  private isPersonVal(v: number): boolean {
+    return this.personVal === 0 ? v === 0 : v > 0
+  }
+
   // ---------- 遮挡：CSS mask-image ----------
   // 把遮罩画成一张小 PNG 交给 CSS，合成交给浏览器的合成器，
   // 比每帧在 Canvas 2D 里画两次全屏视频便宜得多。
@@ -138,7 +167,7 @@ export class PersonMask implements PersonCollider {
     const img = this.maskImg as ImageData
     const px = img.data
     for (let i = 0, n = mw * mh; i < n; i++) {
-      px[i * 4 + 3] = data[i] > 0 ? 255 : 0
+      px[i * 4 + 3] = this.isPersonVal(data[i]) ? 255 : 0
     }
     this.maskCtx.putImageData(img, 0, 0)
     const url = `url(${this.maskCanvas.toDataURL('image/png')})`
@@ -173,12 +202,12 @@ export class PersonMask implements PersonCollider {
     if (vx < 0 || vy < 0 || vx >= this.vw || vy >= this.vh) return false
     const mx = ((vx * this.mw) / this.vw) | 0
     const my = ((vy * this.mh) / this.vh) | 0
-    return d[my * this.mw + mx] > 0
+    return this.isPersonVal(d[my * this.mw + mx])
   }
 
   private at(mx: number, my: number): number {
     if (mx < 0 || my < 0 || mx >= this.mw || my >= this.mh) return 0
-    return (this.data as Uint8Array)[my * this.mw + mx] > 0 ? 1 : 0
+    return this.isPersonVal((this.data as Uint8Array)[my * this.mw + mx]) ? 1 : 0
   }
 
   normal(sx: number, sy: number, out: Float32Array): void {
