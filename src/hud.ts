@@ -79,6 +79,7 @@ export class Hud {
           <div class="preview" id="previewWrap" hidden>
             <video id="previewVid" autoplay muted loop playsinline aria-label="${copy.start.previewAlt}"></video>
           </div>
+          <div class="start-copy">
           <h1 class="start-title">${copy.start.title}</h1>
           <p class="start-sub">${copy.start.subtitle}</p>
           <button class="btn-primary start-btn" id="startBtn">
@@ -88,6 +89,7 @@ export class Hud {
           <p class="start-note" id="startNote" hidden></p>
           <p class="start-steps" id="startSteps" hidden></p>
           <button type="button" class="start-link" id="startRetry" hidden>${copy.start.retryCamera}</button>
+          </div>
         </div>
         <p class="start-cam"><span class="start-cam-dot" aria-hidden="true"></span>${copy.start.needCamera}</p>
         <p class="start-privacy">${copy.start.liveDemo}</p>
