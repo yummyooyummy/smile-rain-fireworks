@@ -202,6 +202,16 @@ export class Effects {
     return this.tier
   }
 
+  /** 退出回开始页时清空所有粒子。只清 alive 标志，不重新分配。 */
+  clear(): void {
+    this.rAlive.fill(0)
+    this.sAlive.fill(0)
+    this.kAlive.fill(0)
+    this.rainAlive = 0
+    this.sparkAlive = 0
+    this.rocketAlive = 0
+  }
+
   setRainRate(rate: number): void {
     this.rainRate = rate < 0 ? 0 : rate > 1 ? 1 : rate
   }

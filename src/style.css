@@ -121,6 +121,68 @@ body {
   max-width: 26rem;
 }
 
+.start-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.start-btn .spinner {
+  display: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(20, 16, 15, 0.35);
+  border-top-color: var(--ground);
+  animation: spin 0.8s linear infinite;
+}
+
+.start-btn.is-busy .spinner {
+  display: block;
+}
+
+.start-btn.is-busy {
+  opacity: 0.85;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 加载模型那一行：只有文字没有条。转圈说「在忙」，数字说「没卡死」。 */
+.start-note {
+  margin: -6px 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.start-steps {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(245, 237, 230, 0.06);
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: var(--ink);
+}
+
+.start-link {
+  border: 0;
+  background: none;
+  padding: 4px 8px;
+  color: var(--gold);
+  font: inherit;
+  font-size: 0.85rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
 .start-privacy {
   margin: 0;
   color: rgba(164, 148, 138, 0.7);
@@ -168,7 +230,8 @@ body {
 .btn-ghost:focus-visible,
 .manual:focus-visible,
 .share:focus-visible,
-.gear:focus-visible {
+.icon-btn:focus-visible,
+.ui-dot:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 3px;
 }
@@ -192,42 +255,6 @@ body {
   height: 100%;
   object-fit: cover;
   display: block;
-}
-
-/* ---------- 开始页：加载进度 ---------- */
-
-/* 模型 4MB，国内网络下可能十几秒。没有进度条，用户分不清「在下载」和「卡死」。 */
-.load {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  margin-top: 18px;
-}
-
-.load-bar {
-  width: 180px;
-  height: 3px;
-  border-radius: 3px;
-  background: rgba(245, 237, 230, 0.18);
-  overflow: hidden;
-}
-
-.load-bar i {
-  display: block;
-  width: 100%;
-  height: 100%;
-  transform-origin: left center;
-  transform: scaleX(0);
-  transition: transform 0.2s ease-out;
-  background: linear-gradient(90deg, var(--accent), var(--gold));
-}
-
-.load-text {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- 引导：提示文字 + 其下的进度条 ---------- */
@@ -257,33 +284,30 @@ body {
   text-shadow: 0 2px 14px rgba(0, 0, 0, 0.75);
 }
 
-.guide-row {
+.guide-text.is-off {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.guide-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.guide-bar-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  max-width: min(90vw, 30rem);
+  gap: 8px;
 }
 
-.guide-skip {
-  flex: none;
-  padding: 3px 10px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(20, 16, 15, 0.5);
+.guide-bar-row span {
+  width: 2.6em;
+  white-space: nowrap;
+  font-size: 0.68rem;
   color: var(--muted);
-  font: inherit;
-  font-size: 0.75rem;
-  cursor: pointer;
-  pointer-events: auto;
-}
-
-.guide-skip:hover {
-  color: var(--ink);
-}
-
-.guide-skip:focus-visible {
-  outline: 2px solid var(--gold);
-  outline-offset: 2px;
+  letter-spacing: 0.06em;
+  text-align: right;
 }
 
 .guide-bar {
@@ -293,17 +317,6 @@ body {
   border-radius: 3px;
   background: rgba(245, 237, 230, 0.18);
   overflow: hidden;
-}
-
-/* 50% 处的刻度：左半段是「笑到位」，右半段是「张嘴到位」 */
-.guide-bar::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: -2px;
-  width: 1px;
-  height: 7px;
-  background: rgba(245, 237, 230, 0.45);
 }
 
 .guide-bar i {
@@ -335,6 +348,76 @@ body {
   font-size: 0.82rem;
   color: var(--ink);
   white-space: nowrap;
+}
+
+/* ---------- 右上角：隐藏 UI / 设置 / 退出 ---------- */
+
+.topbar {
+  position: absolute;
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  display: flex;
+  gap: 8px;
+}
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(20, 16, 15, 0.62);
+  backdrop-filter: blur(8px);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.icon-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon-btn svg .knob {
+  fill: currentColor;
+  stroke: none;
+}
+
+.icon-btn:active {
+  transform: scale(0.93);
+}
+
+/* 隐藏 UI 后只留这一个点，点它恢复。它必须比什么都没有多一点点，否则找不回来。 */
+.ui-dot {
+  position: absolute;
+  right: calc(24px + env(safe-area-inset-right, 0px));
+  top: calc(24px + env(safe-area-inset-top, 0px));
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(245, 237, 230, 0.3);
+  cursor: pointer;
+  padding: 0;
+}
+
+.ui-dot::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
+}
+
+#hud.is-ui-hidden > :not(.ui-dot):not(.start):not(.debug) {
+  display: none !important;
 }
 
 /* ---------- 一次性提示 ---------- */
@@ -496,6 +579,32 @@ body {
   background: linear-gradient(135deg, var(--accent), var(--gold));
 }
 
+.manual-hint {
+  position: absolute;
+  right: calc(20px + 56px + 12px + env(safe-area-inset-right, 0px));
+  bottom: calc(24px + 20px + env(safe-area-inset-bottom, 0px));
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* 长按时外圈走一圈，走满即发射 */
+.manual::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--gold);
+  opacity: 0;
+}
+
+.manual.is-holding::before {
+  opacity: 1;
+  animation: spin 0.35s linear;
+}
+
 /* 截图分享：挨着手动圆钮左侧，略小一号，不挡画面中央 */
 .share {
   position: absolute;
@@ -526,90 +635,6 @@ body {
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-
-/* ---------- 齿轮 ---------- */
-
-.gear {
-  position: absolute;
-  right: calc(18px + env(safe-area-inset-right, 0px));
-  top: calc(18px + env(safe-area-inset-top, 0px));
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 1px solid var(--line);
-  background: rgba(20, 16, 15, 0.62);
-  backdrop-filter: blur(8px);
-  color: var(--ink);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  transition:
-    transform 0.15s ease,
-    background 0.2s ease;
-}
-
-.gear:hover {
-  background: rgba(20, 16, 15, 0.82);
-}
-
-.gear:active {
-  transform: scale(0.92);
-}
-
-/* ---------- 错误页 ---------- */
-
-.error {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgba(20, 16, 15, 0.92);
-  pointer-events: auto;
-}
-
-.error-inner {
-  max-width: 26rem;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  align-items: center;
-}
-
-.error-inner h2 {
-  margin: 0;
-  font-size: 1.25rem;
-}
-
-.error-inner p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.9rem;
-  line-height: 1.75;
-}
-
-.error-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: center;
-  margin-top: 6px;
-}
-
-/* 平台相关的那一句是唯一「照着做就能解决」的内容，所以比其余提示更醒目 */
-.error-inner .error-steps {
-  align-self: stretch;
-  margin: 0;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: rgba(245, 237, 230, 0.06);
-  color: var(--ink);
-  font-size: 0.88rem;
-  line-height: 1.7;
-  text-align: left;
 }
 
 /* ---------- 调试面板 ---------- */
@@ -672,6 +697,27 @@ body {
   margin: 0 auto;
   border-radius: 999px;
   background: rgba(245, 237, 230, 0.28);
+}
+
+.drawer-advanced {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.drawer-sub {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.drawer-hint {
+  margin: -6px 0 2px;
+  font-size: 0.76rem;
+  color: var(--muted);
 }
 
 .drawer-replay {
@@ -771,12 +817,6 @@ body {
   color: var(--gold);
 }
 
-.drawer-tier {
-  margin: 4px 0 0;
-  font-size: 0.75rem;
-  color: var(--muted);
-  letter-spacing: 0.04em;
-}
 
 @media (min-width: 641px) {
   .drawer {
@@ -836,6 +876,12 @@ body {
 @media (max-width: 640px) {
   .guide {
     bottom: calc(94px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* 窄屏上顶部居中的胶囊会和右上角三钮撞在一起，整体下移一行 */
+  .status,
+  .banner {
+    top: calc(68px + env(safe-area-inset-top, 0px));
   }
 
   .toast {

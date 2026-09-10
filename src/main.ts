@@ -67,22 +67,15 @@ let guideDoneAt = 0
 
 const hud = new Hud(hudRoot, {
   onStart: () => void connect(true),
-  onManualTap: () => state.forceRain(3),
-  onManualHold: () => {
-    state.forceBurst()
-  },
-  onGearClick: () => {
-    // 高级模式抽屉由 Cursor 实现，见 TODO-for-cursor.md
-    window.dispatchEvent(new CustomEvent('open-drawer'))
-  },
   onFallback: () => {
+    hud.hideStart()
     enterManualMode()
   },
-  onReconnect: () => void connect(false),
-  onSkipGuide: () => {
-    guideDone = true
-    guideDoneAt = 0
-  },
+  onReconnect: () => void connect(!inScene),
+  onExit: () => exitToStart(),
+  onManualTap: () => state.forceRain(3),
+  onManualHold: () => state.forceBurst(),
+  onGear: (advanced) => window.dispatchEvent(new CustomEvent('open-drawer', { detail: { advanced } })),
   onResume: () => resumeFromIdle(),
 })
 
@@ -149,13 +142,14 @@ function resize(): void {
  * 而不是 location.reload()——刷新会把 4MB 模型重新下一遍。
  */
 let connecting = false
+/** 是否已进入主画面（退出后为 false）。决定重连时的反馈落在开始页还是横幅上。 */
+let inScene = false
 
 async function connect(fromStart: boolean): Promise<void> {
   if (connecting) return
   connecting = true
-  if (fromStart) hud.setLoading(true)
-  hud.setReconnecting(true)
-  hud.setLoadingStage(copy.start.stageCamera, 0.05)
+  if (fromStart) hud.setStartState({ kind: 'camera' })
+  else hud.setReconnecting(true)
 
   try {
     stream = await startCamera(video)
@@ -169,57 +163,66 @@ async function connect(fromStart: boolean): Promise<void> {
             ? 'timeout'
             : 'unsupported'
         : 'unsupported'
-    fail(kind)
+    fail(fromStart, kind)
     return
   }
 
-  // 模型只初始化一次：摄像头失败后重连时，模型往往已经在内存里了，不必再下一遍
+  // 模型只初始化一次：重连时往往已在内存里
   if (!face.ready) {
     try {
-      hud.setLoadingStage(copy.start.stageModel, 0.2)
+      if (fromStart) hud.setStartState({ kind: 'model' })
       await face.init((loaded, total) => {
-        if (total > 0) {
-          const p = loaded / total
-          hud.setLoadingStage(copy.start.stageModel, 0.2 + 0.7 * p, Math.round(p * 100))
-        } else {
-          hud.setLoadingStage(copy.start.stageModel, 0.5)
-        }
+        if (!fromStart) return
+        hud.setStartState({ kind: 'model', pct: total > 0 ? Math.round((loaded / total) * 100) : undefined })
       })
     } catch {
       stopCamera(stream)
       stream = null
       cameraOn = false
-      fail('modelFail')
+      fail(fromStart, 'modelFail')
       return
     }
   }
 
-  hud.setLoadingStage(copy.start.stageWarmup, 1)
+  if (fromStart) hud.setStartState({ kind: 'warmup' })
   idlePaused = false
   noFaceMs = 0
   hud.showPaused(false)
   face.resetClock()
   connecting = false
-  hud.setLoading(false)
+  inScene = true
   hud.hideStart()
-  hud.showManualBanner(false)
-  hud.showControls({ gear: !flags.clean })
+  hud.showControls({ camera: true, clean: flags.clean })
   startLoop()
 }
 
-function fail(kind: 'denied' | 'unsupported' | 'timeout' | 'modelFail'): void {
+/** 失败不跳页：开始页按钮自己变成「摄像头未开启，直接开始」；主画面里则横幅按钮复位。 */
+function fail(fromStart: boolean, reason: 'denied' | 'unsupported' | 'timeout' | 'modelFail'): void {
   connecting = false
-  hud.setLoading(false)
-  hud.setLoadingStage(null, 0)
-  hud.setReconnecting(false)
-  hud.hideStart()
-  hud.showError(kind)
+  if (fromStart) hud.setStartState({ kind: 'failed', reason })
+  else hud.setReconnecting(false)
+}
+
+/** 退出：停摄像头、清粒子、回开始页。已授权过的话下次点开始不会再弹权限。 */
+function exitToStart(): void {
+  running = false
+  idlePaused = false
+  stopCamera(stream)
+  stream = null
+  video.srcObject = null
+  cameraOn = false
+  inScene = false
+  effects.clear()
+  effects.setRainRate(0)
+  state.resetGuide()
+  guideDone = false
+  guideDoneAt = 0
+  hud.showStart()
 }
 
 /**
- * 长时间没人 → 停掉 rAF。手机上把这个页面开着不管，摄像头 + 每帧检测 + 粒子
- * 会一直烧电；而且没人的时候这些计算一点用都没有。
- * 只在有摄像头时启用——手动模式下「没有脸」是常态，不能因此把人踢停。
+ * 长时间没人 → 停掉 rAF。手机上把页面开着不管，摄像头 + 每帧检测 + 粒子会一直烧电。
+ * 只在有摄像头时启用——手动模式下「没有脸」是常态。
  */
 const IDLE_PAUSE_MS = 60_000
 let noFaceMs = 0
@@ -245,11 +248,11 @@ function resumeFromIdle(): void {
 /** 没有摄像头也必须能玩。但要让用户知道自己在手动模式，并给一条回去的路。 */
 function enterManualMode(): void {
   cameraOn = false
+  inScene = true
   idlePaused = false
   noFaceMs = 0
   hud.showPaused(false)
-  hud.showManualBanner(true)
-  hud.showControls({ gear: !flags.clean })
+  hud.showControls({ camera: false, clean: flags.clean })
   startLoop()
 }
 
@@ -355,22 +358,22 @@ function loop(now: number): void {
 function updateHud(sig: ReturnType<FaceTracker['sample']>, now: number): void {
   if (effects.stats.collisions > 0) state.reachedCollision = true
 
-  // 引导三步 → 走完只留进度条
-  // 进度条是「我离触发还差多少」的常驻反馈，不能跟着提示文字一起消失，
-  // 否则第二次开始用户就再也不知道自己笑得够不够。
+  // 引导三步 → 走完只留两根进度条（各自独立，互不清零）
+  const sp = state.smileProgress
+  const lp = state.laughProgress
   if (!cfg.showGuide || flags.clean || !cameraOn) {
-    hud.setGuide(null, 0, 'none')
+    hud.setGuide(null, 0, 0)
   } else if (guideDone) {
-    hud.setGuide('', state.guideProgress, state.guidePhase)
+    hud.setGuide('', sp, lp)
   } else if (!state.reachedSmile) {
-    hud.setGuide(copy.guide.step1, state.guideProgress, 'smile')
+    hud.setGuide(copy.guide.step1, sp, lp)
   } else if (!state.reachedLaugh) {
-    hud.setGuide(copy.guide.step2, state.guideProgress, 'laugh')
+    hud.setGuide(copy.guide.step2, sp, lp)
   } else if (!state.reachedCollision) {
-    hud.setGuide(copy.guide.step3, state.guideProgress, state.guidePhase)
+    hud.setGuide(copy.guide.step3, sp, lp)
   } else {
     if (!guideDoneAt) guideDoneAt = now
-    hud.setGuide(copy.guide.done, state.guideProgress, state.guidePhase)
+    hud.setGuide(copy.guide.done, sp, lp)
     if (now - guideDoneAt > 2000) guideDone = true
   }
 
@@ -387,7 +390,7 @@ function updateHud(sig: ReturnType<FaceTracker['sample']>, now: number): void {
       [
         `mode      ${state.mode}`,
         `smile     ${sig.smile.toFixed(3)}   jawOpen ${sig.jawOpen.toFixed(3)}`,
-        `rainRate  ${state.rainRate.toFixed(2)}   guide ${state.guideProgress.toFixed(2)}`,
+        `rainRate  ${state.rainRate.toFixed(2)}   bars ${state.smileProgress.toFixed(2)}/${state.laughProgress.toFixed(2)}`,
         `fps       ${(1000 / emaFrame).toFixed(0)}   frame ${emaFrame.toFixed(1)}ms`,
         `detect    ${face.lastDetectMs.toFixed(1)}ms (${face.delegate}, 每 ${DETECT_EVERY} 帧)`,
         `assets    ${face.assetSource}   headRot ${face.headRotDeg.toFixed(1)}°`,

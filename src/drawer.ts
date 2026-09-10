@@ -64,22 +64,26 @@ panel.innerHTML = `
     <div class="drawer-handle" aria-hidden="true"><i></i></div>
     <header class="drawer-head">
       <h2 class="drawer-title">${copy.drawer.title}</h2>
-      <button type="button" class="drawer-close" id="drawerClose" aria-label="${copy.drawer.title}">×</button>
+      <button type="button" class="drawer-close" id="drawerClose" aria-label="${copy.drawer.close}">×</button>
     </header>
     <div class="drawer-body">
-      ${sliderMarkup}
       <label class="drawer-switch">
         <input type="checkbox" data-toggle="showGuide" />
         <span>${copy.drawer.showGuide}</span>
       </label>
-      <label class="drawer-switch">
-        <input type="checkbox" data-toggle="showDebug" />
-        <span>${copy.drawer.showDebug}</span>
-      </label>
       <button type="button" class="btn-ghost drawer-replay" id="drawerReplay">${copy.drawer.replayGuide}</button>
-      <button type="button" class="btn-ghost drawer-export" id="drawerExport">${copy.drawer.exportJson}</button>
-      <p class="drawer-feedback" id="drawerFeedback" hidden></p>
-      <p class="drawer-tier">${copy.drawer.tier} <span id="drawerTier"></span></p>
+
+      <section class="drawer-advanced" id="drawerAdvanced" hidden>
+        <h3 class="drawer-sub">${copy.drawer.advancedTitle}</h3>
+        <p class="drawer-hint">${copy.drawer.advancedHint}</p>
+        ${sliderMarkup}
+        <label class="drawer-switch">
+          <input type="checkbox" data-toggle="showDebug" />
+          <span>${copy.drawer.showDebug}</span>
+        </label>
+        <button type="button" class="btn-primary drawer-export" id="drawerExport">${copy.drawer.copyConfig}</button>
+        <p class="drawer-feedback" id="drawerFeedback" hidden></p>
+      </section>
     </div>
   </div>
 `
@@ -92,10 +96,9 @@ const replayBtn = panel.querySelector('#drawerReplay') as HTMLButtonElement
 const closeBtn = panel.querySelector('#drawerClose') as HTMLButtonElement
 const exportBtn = panel.querySelector('#drawerExport') as HTMLButtonElement
 const feedback = panel.querySelector('#drawerFeedback') as HTMLElement
-const tierEl = panel.querySelector('#drawerTier') as HTMLElement
+const advanced = panel.querySelector('#drawerAdvanced') as HTMLElement
 
 let open = false
-let tierTimer = 0
 let feedbackTimer = 0
 // 抽屉打开时往 history 里压一条，手机的返回手势/返回键就变成「关抽屉」而不是「离开页面」。
 // 不这么做，用户在手机上打开抽屉后返回，直接退出整个 demo，摄像头授权还得重来一遍。
@@ -119,10 +122,10 @@ function syncFromConfig(): void {
   const debug = panel.querySelector<HTMLInputElement>('[data-toggle="showDebug"]')
   if (guide) guide.checked = cfg.showGuide
   if (debug) debug.checked = cfg.showDebug
-  tierEl.textContent = fx.getTier()
 }
 
-function setOpen(next: boolean, fromPop = false): void {
+function setOpen(next: boolean, fromPop = false, showAdvanced?: boolean): void {
+  if (showAdvanced !== undefined) advanced.hidden = !showAdvanced
   if (open === next) {
     if (next) syncFromConfig()
     return
@@ -142,16 +145,7 @@ function setOpen(next: boolean, fromPop = false): void {
     lastFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
     syncFromConfig()
     window.setTimeout(() => closeBtn.focus({ preventScroll: true }), 60)
-    if (tierTimer) window.clearInterval(tierTimer)
-    tierTimer = window.setInterval(() => {
-      const fx = getFx()
-      if (fx) tierEl.textContent = fx.getTier()
-    }, 500)
   } else {
-    if (tierTimer) {
-      window.clearInterval(tierTimer)
-      tierTimer = 0
-    }
     sheet.style.transform = ''
     lastFocus?.focus({ preventScroll: true })
     lastFocus = null
@@ -190,7 +184,6 @@ function patchConfig(partial: Partial<EffectConfig>): void {
     const val = panel.querySelector<HTMLElement>(`[data-val="${s.key}"]`)
     if (val) val.textContent = formatSlider(s.key, cfg[s.key])
   }
-  tierEl.textContent = fx.getTier()
 }
 
 panel.addEventListener('input', (e) => {
@@ -213,26 +206,29 @@ async function exportConfig(): Promise<void> {
   try {
     await navigator.clipboard.writeText(json)
   } catch {
-    /* 下载仍然进行 */
+    // 剪贴板不可用（http / 权限）时退回下载
+    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'effect.json'
+    a.click()
+    URL.revokeObjectURL(url)
   }
-  const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }))
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'effect.json'
-  a.click()
-  URL.revokeObjectURL(url)
   feedback.hidden = false
-  feedback.textContent = copy.drawer.exported
+  feedback.textContent = copy.drawer.copied
   if (feedbackTimer) window.clearTimeout(feedbackTimer)
-  feedbackTimer = window.setTimeout(() => {
-    feedback.hidden = true
-  }, 2000)
+  feedbackTimer = window.setTimeout(() => (feedback.hidden = true), 2000)
 }
 
 closeBtn.addEventListener('click', () => setOpen(false))
 exportBtn.addEventListener('click', () => void exportConfig())
 
-window.addEventListener('open-drawer', () => setOpen(!open))
+// detail.advanced：短按设置键 = 基础；长按 = 展开触发阈值
+window.addEventListener('open-drawer', (e) => {
+  const adv = !!(e as CustomEvent<{ advanced?: boolean }>).detail?.advanced
+  if (open && !adv) setOpen(false)
+  else setOpen(true, false, adv)
+})
 
 replayBtn.addEventListener('click', () => {
   window.dispatchEvent(new CustomEvent('replay-guide'))
@@ -247,7 +243,7 @@ document.addEventListener(
     const t = e.target
     if (!(t instanceof Node)) return
     if (panel.contains(t)) return
-    if (t instanceof Element && t.closest('.gear')) return
+    if (t instanceof Element && t.closest('.topbar')) return
     setOpen(false)
   },
   true,
@@ -305,7 +301,7 @@ window.addEventListener('popstate', () => {
 
 function openWhenReady(frames = 0): void {
   if (getFx()) {
-    setOpen(true)
+    setOpen(true, false, true)
     return
   }
   if (frames < 60) requestAnimationFrame(() => openWhenReady(frames + 1))

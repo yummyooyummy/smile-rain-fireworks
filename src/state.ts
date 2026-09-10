@@ -21,6 +21,7 @@ const HOLD_LAUGH_EXIT = 400 // ≈8 检测帧
 const HOLD_NO_FACE = 1000
 
 const RAIN_FADE_IN = 0.4 // 秒
+const RAIN_CUT_OUT = 0.4
 const RAIN_FADE_OUT = 0.8
 
 const BURST_COOLDOWN = 1.2 // 大烟花间隔
@@ -44,8 +45,9 @@ export class ExpressionState {
   burstScale = 1
 
   /** 引导进度条用：当前正在朝哪个触发靠近，以及进度 0–1 */
-  guidePhase: 'smile' | 'laugh' | 'none' = 'smile'
-  guideProgress = 0
+  /** 两根进度条：「离微笑触发还差多少」「离大笑触发还差多少」，各自独立 */
+  smileProgress = 0
+  laughProgress = 0
 
   /** 里程碑：给引导文案判断走到第几步 */
   reachedSmile = false
@@ -175,33 +177,26 @@ export class ExpressionState {
     // ---- 雨量：连续信号驱动，缓入缓出 ----
     if (this.manualRain > 0) this.manualRain -= dt
     const active = this.mode !== 'idle' || this.manualRain > 0
-    const target = active
-      ? this.manualRain > 0
-        ? 0.7
-        : smoothstep(c.smileExit, 0.8, sig.smile) * 0.95 + 0.05
-      : 0
-    const speed = target > this.rainRate ? dt / RAIN_FADE_IN : dt / RAIN_FADE_OUT
+    // 雨与烟花互斥：题目是两个并列的触发条件，一个状态一个效果。
+    // 大笑时雨在 0.4 s 内淡出，只剩烟花；回到微笑再淡回来。
+    // 叠加的话烟花碎片和雨丝一起往下掉，评审分不清哪个在碰头。
+    const target =
+      this.mode === 'laughing'
+        ? 0
+        : active
+          ? this.manualRain > 0
+            ? 0.7
+            : smoothstep(c.smileExit, 0.8, sig.smile) * 0.95 + 0.05
+          : 0
+    const outSpeed = this.mode === 'laughing' ? dt / RAIN_CUT_OUT : dt / RAIN_FADE_OUT
+    const speed = target > this.rainRate ? dt / RAIN_FADE_IN : outSpeed
     const diff = target - this.rainRate
     this.rainRate += Math.abs(diff) <= speed ? diff : Math.sign(diff) * speed
 
-    // ---- 引导进度条：一条连续刻度，前半段是「笑」后半段是「张嘴」----
-    //
-    // 早期版本在进入 Smiling 的瞬间把进度条从「微笑进度」换成「大笑进度」，
-    // 于是用户看到的是「涨到满 → 立刻归零」，而他其实一直在笑。
-    // 进度条中途改变含义，用户是无法理解的。
-    // 现在整条是同一把尺子：0→50% 由微笑推进，50%→100% 由张嘴推进，
-    // 持续微笑时它稳定停在 50% 附近，不会归零。
-    const seg1 = 0.5 * Math.min(1, sig.smile / c.smileEnter)
-    if (this.mode === 'laughing') {
-      this.guidePhase = 'laugh'
-      this.guideProgress = 1
-    } else if (this.mode === 'smiling') {
-      this.guidePhase = 'laugh'
-      this.guideProgress = seg1 + 0.5 * Math.min(1, sig.jawOpen / c.laughJaw)
-    } else {
-      this.guidePhase = 'smile'
-      this.guideProgress = seg1
-    }
+    // ---- 两根进度条：各自独立，互不清零 ----
+    this.smileProgress = this.mode !== 'idle' ? 1 : Math.min(1, sig.smile / c.smileEnter)
+    this.laughProgress =
+      this.mode === 'laughing' ? 1 : this.mode === 'smiling' ? Math.min(1, sig.jawOpen / c.laughJaw) : 0
   }
 
   private enterLaughing(sig: Signals): void {
