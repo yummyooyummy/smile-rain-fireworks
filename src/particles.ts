@@ -505,23 +505,25 @@ export class Effects {
     const parentColor = this.scolor[i]
     const parentSize = this.ssize[i]
     const speed = Math.hypot(this.svx[i], this.svy[i])
-    const n = 3 + ((Math.random() * 3) | 0)
+    // 撞到人身上是「擦过皮肤溅出一两点火星」，不是再炸一次——
+    // 烟花层现在有余辉，每颗碎片都会留光迹，3–5 颗就成了一朵小烟花，太抢戏。
+    const n = 1 + ((Math.random() * 2) | 0)
     for (let k = 0; k < n; k++) {
       const idx = this.acquireSpark()
       if (idx < 0) break
       // 以碰撞法线为中心，向四周散开
-      const ang = Math.atan2(ny, nx) + (Math.random() - 0.5) * 2.4
-      const sp = (60 + speed * 0.35) * (0.5 + Math.random() * 0.8)
+      const ang = Math.atan2(ny, nx) + (Math.random() - 0.5) * 2.0
+      const sp = (40 + speed * 0.25) * (0.5 + Math.random() * 0.7)
       this.sx[idx] = this.sx[i]
       this.sy[idx] = this.sy[i]
       this.spx[idx] = this.sx[i]
       this.spy[idx] = this.sy[i]
       this.svx[idx] = Math.cos(ang) * sp
       this.svy[idx] = Math.sin(ang) * sp
-      const life = 0.3 + Math.random() * 0.35
+      const life = 0.22 + Math.random() * 0.25
       this.slife[idx] = life
       this.smax[idx] = life
-      this.ssize[idx] = parentSize * (0.35 + Math.random() * 0.2)
+      this.ssize[idx] = parentSize * (0.3 + Math.random() * 0.15)
       this.scolor[idx] = Math.random() < 0.5 ? parentColor : 2 // 掺一点奶白当火星
       this.sflash[idx] = FLASH_MS
       this.sgen[idx] = 1 // 碎片不再分裂，避免连锁
@@ -734,11 +736,14 @@ export class Effects {
       this.headPulse = PULSE_MS
       this.headPulseCooldown = PULSE_COOLDOWN_MS
     }
-    if (this.sgen[i] === 0) {
+    if (this.sgen[i] === 0 && Math.random() < 0.6) {
       this.shatter(i, nx, ny)
       this.sAlive[i] = 0
       this.sparkAlive--
     } else {
+      // 另外四成撞击：母粒子本身弹开、闪一下白、变小、之后当碎片处理（不再分裂）
+      this.sgen[i] = 1
+      this.ssize[i] *= 0.7
       const vn = this.svx[i] * nx + this.svy[i] * ny
       if (vn < 0) {
         this.svx[i] -= (1 + rest) * vn * nx
