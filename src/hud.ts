@@ -62,6 +62,7 @@ export class Hud {
   private didHold = false
   private sharing = false
   private toastTimer = 0
+  private startHideTimer = 0
   private uiHidden = false
 
   constructor(root: HTMLElement, cb: HudCallbacks) {
@@ -316,11 +317,19 @@ export class Hud {
 
   hideStart(): void {
     this.startPage.classList.add('is-gone')
-    window.setTimeout(() => (this.startPage.hidden = true), 420)
+    if (this.startHideTimer) window.clearTimeout(this.startHideTimer)
+    this.startHideTimer = window.setTimeout(() => {
+      this.startPage.hidden = true
+      this.startHideTimer = 0
+    }, 420)
   }
 
   /** 退出回开始页：把主画面的所有控件收掉。 */
   showStart(): void {
+    if (this.startHideTimer) {
+      window.clearTimeout(this.startHideTimer)
+      this.startHideTimer = 0
+    }
     this.setUiHidden(false)
     this.topbar.hidden = true
     this.manualBtn.hidden = true
