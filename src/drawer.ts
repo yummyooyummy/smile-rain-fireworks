@@ -92,6 +92,9 @@ const tierEl = panel.querySelector('#drawerTier') as HTMLElement
 let open = false
 let tierTimer = 0
 let feedbackTimer = 0
+// 抽屉打开时往 history 里压一条，手机的返回手势/返回键就变成「关抽屉」而不是「离开页面」。
+// 不这么做，用户在手机上打开抽屉后返回，直接退出整个 demo，摄像头授权还得重来一遍。
+let pushed = false
 
 function syncFromConfig(): void {
   const fx = getFx()
@@ -112,12 +115,20 @@ function syncFromConfig(): void {
   tierEl.textContent = fx.getTier()
 }
 
-function setOpen(next: boolean): void {
+function setOpen(next: boolean, fromPop = false): void {
   if (open === next) {
     if (next) syncFromConfig()
     return
   }
   open = next
+  if (next && !fromPop) {
+    history.pushState({ drawer: true }, '')
+    pushed = true
+  } else if (!next) {
+    const shouldPop = pushed && !fromPop
+    pushed = false
+    if (shouldPop) history.back()
+  }
   panel.classList.toggle('is-open', next)
   panel.setAttribute('aria-hidden', next ? 'false' : 'true')
   if (next) {
@@ -188,6 +199,10 @@ window.addEventListener('open-drawer', () => setOpen(!open))
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && open) setOpen(false)
+})
+
+window.addEventListener('popstate', () => {
+  if (open) setOpen(false, true)
 })
 
 function openWhenReady(frames = 0): void {

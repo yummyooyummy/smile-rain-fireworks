@@ -12,6 +12,7 @@ export const copy = {
     stageCamera: '正在请求摄像头权限…',
     stageModel: '正在加载识别模型',
     stageWarmup: '正在启动识别…',
+    previewAlt: '玩法预览',
   },
   guide: {
     step1: '对着镜头微笑，雨就会落下来',
@@ -38,8 +39,18 @@ export const copy = {
   },
   error: {
     denied: '没有拿到摄像头权限',
-    deniedHint:
-      '在浏览器地址栏左侧的站点设置里允许摄像头，然后点重试。也可以用右下角按钮手动触发特效。',
+    // 「去设置里打开」这句话在不同平台指向完全不同的地方。
+    // 说不清路径，用户就会放弃——所以按平台给一条能照着做的路径。
+    deniedHint: '允许摄像头之后点重试。也可以用右下角按钮手动触发特效。',
+    deniedSteps: {
+      iosSafari: '点地址栏左边的「ᴀA」→ 网站设置 → 摄像头 → 改成「允许」。如果那里没有摄像头这一项，去 设置 → Safari 浏览器 → 摄像头 → 允许。',
+      iosOther: '点地址栏左边的站点图标 → 权限 → 摄像头 → 允许。iOS 上第三方浏览器还要在 设置 → 该浏览器 → 摄像头 里打开。',
+      androidChrome: '点地址栏左边的锁 / 调节图标 → 权限 → 摄像头 → 允许，然后回到这里点重试。',
+      desktopChrome: '点地址栏最右边那个被划掉的摄像头图标 → 选「始终允许」→ 点重试。',
+      desktopSafari: '菜单栏 Safari 浏览器 → 设置 → 网站 → 摄像头 → 把本站改成「允许」。',
+      desktopFirefox: '点地址栏左边被划掉的摄像头图标 → 清除这条阻止设置 → 点重试。',
+      generic: '在浏览器地址栏附近的站点设置里把摄像头改成「允许」，然后点重试。',
+    },
     unsupported: '这个浏览器不支持摄像头',
     unsupportedHint: '请用最新版 Chrome、Safari 或 Edge 打开。',
     timeout: '摄像头一直没有响应',

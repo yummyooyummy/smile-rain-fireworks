@@ -24,6 +24,7 @@ export class Hud {
 
   private startPage!: HTMLElement
   private startBtn!: HTMLButtonElement
+  private previewWrap!: HTMLElement
   private loadWrap!: HTMLElement
   private loadFill!: HTMLElement
   private loadText!: HTMLElement
@@ -61,6 +62,10 @@ export class Hud {
         <div class="start-inner">
           <h1 class="start-title">${copy.start.title}</h1>
           <p class="start-sub">${copy.start.subtitle}</p>
+          <div class="preview" id="previewWrap" hidden>
+            <video id="previewVid" autoplay muted loop playsinline
+                   aria-label="${copy.start.previewAlt}"></video>
+          </div>
           <button class="btn-primary" id="startBtn">${copy.start.button}</button>
           <div class="load" id="loadWrap" hidden>
             <div class="load-bar"><i id="loadFill"></i></div>
@@ -112,6 +117,7 @@ export class Hud {
 
     this.startPage = $('startPage')
     this.startBtn = $('startBtn')
+    this.previewWrap = $('previewWrap')
     this.loadWrap = $('loadWrap')
     this.loadFill = $('loadFill')
     this.loadText = $('loadText')
@@ -133,6 +139,25 @@ export class Hud {
     this.bannerBtn.addEventListener('click', () => this.cb.onReconnect())
     this.shareBtn.addEventListener('click', () => void this.shareFrame())
     this.bindManual()
+    this.bindPreview()
+  }
+
+  /**
+   * 开始页的玩法预览。视频文件还没录时（现在就是），这个槽位必须干净地消失，
+   * 而不是留一个黑框或者一个碎图标——所以默认 hidden，只有真的能播才显示。
+   * 用户开了「减少动态效果」时也不显示。
+   */
+  private bindPreview(): void {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    const vid = this.previewWrap.querySelector('video') as HTMLVideoElement
+    vid.addEventListener('canplay', () => {
+      this.previewWrap.hidden = false
+    })
+    vid.addEventListener('error', () => {
+      this.previewWrap.hidden = true
+    })
+    // 放在 src 赋值之前绑定，避免同步失败时事件已经过去了
+    vid.src = 'preview.mp4'
   }
 
   private bindManual(): void {
@@ -312,6 +337,19 @@ export class Hud {
 
   // ---------- 错误页 ----------
 
+  /** 「去设置里允许」这句话在每个平台指向不同的地方，说不清路径用户就放弃了。 */
+  private deniedSteps(): string {
+    const ua = navigator.userAgent
+    const s = copy.error.deniedSteps
+    const iOS = /iPad|iPhone|iPod/.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua))
+    if (iOS) return /CriOS|EdgiOS|FxiOS/.test(ua) ? s.iosOther : s.iosSafari
+    if (/Android/.test(ua)) return s.androidChrome
+    if (/Firefox/.test(ua)) return s.desktopFirefox
+    if (/Safari/.test(ua) && !/Chrome|Chromium|Edg/.test(ua)) return s.desktopSafari
+    if (/Chrome|Chromium|Edg/.test(ua)) return s.desktopChrome
+    return s.generic
+  }
+
   showError(kind: 'denied' | 'unsupported' | 'timeout' | 'modelFail'): void {
     const map = {
       denied: [copy.error.denied, copy.error.deniedHint],
@@ -320,10 +358,12 @@ export class Hud {
       modelFail: [copy.error.modelFail, copy.error.modelFailHint],
     } as const
     const [title, hint] = map[kind]
+    const steps = kind === 'denied' ? `<p class="error-steps">${this.deniedSteps()}</p>` : ''
     this.errorPage.hidden = false
     this.errorPage.innerHTML = `
       <div class="error-inner">
         <h2>${title}</h2>
+        ${steps}
         <p>${hint}</p>
         <div class="error-actions">
           <button class="btn-ghost" id="errRetry">${copy.error.retry}</button>

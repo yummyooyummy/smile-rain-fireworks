@@ -173,6 +173,27 @@ body {
   outline-offset: 3px;
 }
 
+/* ---------- 开始页：玩法预览 ---------- */
+
+/* 视频没录出来之前这个槽位是 hidden 的，不占位、不留黑框。 */
+.preview {
+  width: min(100%, 22rem);
+  aspect-ratio: 9 / 16;
+  max-height: 34vh;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow);
+}
+
+.preview video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 /* ---------- 开始页：加载进度 ---------- */
 
 /* 模型 4MB，国内网络下可能十几秒。没有进度条，用户分不清「在下载」和「卡死」。 */
@@ -486,6 +507,20 @@ body {
   gap: 10px;
   justify-content: center;
   margin-top: 6px;
+}
+
+/* 平台相关的那一句是唯一「照着做就能解决」的内容，所以比其余提示更醒目 */
+.error-inner .error-steps {
+  align-self: stretch;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(245, 237, 230, 0.06);
+  color: var(--ink);
+  font-size: 0.88rem;
+  line-height: 1.7;
+  text-align: left;
 }
 
 /* ---------- 调试面板 ---------- */
