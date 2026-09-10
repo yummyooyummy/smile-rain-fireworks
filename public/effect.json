@@ -1,0 +1,13 @@
+{
+  "smileEnter": 0.45,
+  "smileExit": 0.3,
+  "laughSmile": 0.6,
+  "laughJaw": 0.35,
+  "laughExitJaw": 0.2,
+  "rainMax": 1,
+  "fireworkCount": 180,
+  "restitution": 0.65,
+  "hueShift": 0,
+  "showGuide": true,
+  "showDebug": false
+}
