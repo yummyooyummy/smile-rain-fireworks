@@ -251,3 +251,38 @@ One Euro 去抖），但这些改进**评审是看不见的**——他只会看�
    各改一个文件就行，不需要 Cursor。
 3. **录 15 秒演示 GIF**。用 `?mode=clean` 进干净模式录，放 README 顶部。
    这是评审设备摄像头出问题时唯一的兜底，别省。
+
+---
+
+## Prompt 8 · 套 Claude Design 的视觉（先把导出物放进 design/）
+
+Claude Design 里 Share → Export → **Project HTML (.zip)** 解压到 `design/html/`，
+每块画板再导一张 PNG 放到 `design/png/`（文件名用画板名）。**不要点「Claude Code · Send」。**
+
+```
+把 design/ 里 Claude Design 出的视觉套到现有 UI 上。design/html 是它导出的页面源码，
+design/png 是每块画板的效果图；以 PNG 为准，html 只用来抄颜色、字号、间距、圆角的具体数值。
+
+范围（只许改这五个文件）：src/style.css、src/hud.ts、src/drawer.ts、src/copy.ts、index.html。
+不许碰 main.ts / particles.ts / face.ts / state.ts / segment*.ts / view.ts。
+
+必须原样保留的东西（main.ts 和测试脚本靠它们工作，改名就全断）：
+- 元素 id：startPage startBtn startNote startSteps startRetry previewWrap topbar hideBtn gearBtn
+  exitBtn uiDot banner reconnectBtn statusEl guideWrap guideText smileFill laughFill toastEl
+  manualHint manualBtn shareBtn pausedEl debugEl drawerClose drawerReplay drawerAdvanced drawerExport
+- 状态 class：.is-busy .is-gone .is-open .is-ui-hidden .is-holding .is-on .is-off，
+  以及 startBtn 的 data-state
+- style.css 顶部的 [hidden] { display:none !important } 规则和 :root 里的 CSS 变量名
+- #cam #rain #camFront #fx 四层的层级顺序和定位
+- .drawer-sheet 用 transform 做滑入滑出，手机把手拖拽依赖它
+
+做法：按画板逐个套，一块画板一个 commit（S1 开始页 → S2 主画面 → S3 手动模式 → S4 设置面板 → 组件表）。
+每个 commit 前跑 npx tsc --noEmit。颜色只用 :root 里已有的变量，画板里出现的新值就加成新变量，
+不要在规则里写死十六进制。文案改动全部进 copy.ts。
+
+做完给我：改动文件列表、每块画板和 PNG 还有哪些对不上、你不确定的地方。
+不要顺手「优化」任何逻辑。
+```
+
+它最可能犯的错：把 `hidden` 属性换成 `display:none` 的 class（开始页四态会失效）、
+给退出加确认弹窗、改掉 `.drawer-sheet` 的 transform。碰到就回它「回退，CLAUDE.md 屏幕分层那节」。
