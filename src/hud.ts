@@ -154,8 +154,11 @@ export class Hud {
       return
     }
     this.guideWrap.hidden = false
-    if (this.guideText.textContent !== text) this.guideText.textContent = text
-    this.guideBar.hidden = phase === 'none'
+    this.guideWrap.classList.remove('is-gone')
+    // 空字符串 = 引导已走完，只保留进度条这个常驻反馈
+    this.guideText.hidden = text === ''
+    if (text !== '' && this.guideText.textContent !== text) this.guideText.textContent = text
+    this.guideBar.hidden = false
     this.guideBar.dataset.phase = phase
     this.guideFill.style.transform = `scaleX(${Math.max(0, Math.min(1, progress))})`
   }
