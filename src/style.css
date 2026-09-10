@@ -257,8 +257,7 @@ body {
   letter-spacing: 0.02em;
 }
 
-.btn-primary,
-.btn-ghost {
+.btn-primary {
   border: 0;
   border-radius: 999px;
   padding: 0 24px;
@@ -271,29 +270,13 @@ body {
     opacity 0.2s ease,
     background 0.2s ease,
     filter 0.15s ease;
-}
-
-.btn-primary {
   background: var(--grad-primary);
   color: var(--ink-on-accent);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--ink);
-  border: 1px solid var(--line);
-  font-size: 15px;
 }
 
 .btn-primary:active {
   transform: scale(0.98);
   filter: brightness(0.86);
-}
-
-.btn-ghost:active {
-  transform: scale(0.98);
-  border-color: var(--accent-line);
-  background: var(--accent-soft);
 }
 
 .btn-primary:disabled {
@@ -303,7 +286,6 @@ body {
 }
 
 .btn-primary:focus-visible,
-.btn-ghost:focus-visible,
 .manual:focus-visible,
 .share:focus-visible,
 .icon-btn:focus-visible,
