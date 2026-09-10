@@ -9,17 +9,9 @@
 // 信号总线是整个项目的扩展点：以后加「转头让烟花倾斜」只是往 Signals 里多加一个字段。
 
 import { coverMap, videoToScreenX, videoToScreenY, type CoverMap } from './view'
+import { CDN_FACE_MODEL, CDN_WASM_BASE, LOCAL_FACE_MODEL, LOCAL_WASM_BASE, exists } from './assets'
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import type { HeadEllipse } from './particles'
-
-// 资源优先走同源（scripts/prepare-assets.mjs 在构建前准备好），
-// 只有本地不存在时才回退官方 CDN——国内网络下 storage.googleapis.com 不可达，
-// 把它当唯一来源会让整个 Demo 白屏。
-const LOCAL_WASM_BASE = 'wasm'
-const LOCAL_MODEL = 'models/face_landmarker.task'
-const CDN_WASM_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm'
-const CDN_MODEL =
-  'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task'
 
 export type ModelProgress = (loaded: number, total: number) => void
 
@@ -52,17 +44,6 @@ async function fetchModel(url: string, onProgress?: ModelProgress): Promise<Uint
     off += c.length
   }
   return out
-}
-
-async function exists(url: string): Promise<boolean> {
-  try {
-    const r = await fetch(url, { method: 'HEAD' })
-    // Vite dev server 对不存在的路径会回 index.html（SPA 兜底），HEAD 也是 200——
-    // 必须再看 content-type，否则会把一页 HTML 当模型喂给 MediaPipe（"not a valid Flatbuffer"）
-    return r.ok && !(r.headers.get('content-type') || '').includes('text/html')
-  } catch {
-    return false
-  }
 }
 
 /** 允许使用的 blendshape 名单，写死防止拼错 */
@@ -228,7 +209,7 @@ export class FaceTracker {
   async init(onProgress?: ModelProgress): Promise<void> {
     const localOk = await exists(`${LOCAL_WASM_BASE}/vision_wasm_internal.js`)
     const wasmBase = localOk ? LOCAL_WASM_BASE : CDN_WASM_BASE
-    const modelUrl = (await exists(LOCAL_MODEL)) ? LOCAL_MODEL : CDN_MODEL
+    const modelUrl = (await exists(LOCAL_FACE_MODEL)) ? LOCAL_FACE_MODEL : CDN_FACE_MODEL
     this.assetSource = localOk ? 'local' : 'cdn'
     const vision = await FilesetResolver.forVisionTasks(wasmBase)
     const buf = await fetchModel(modelUrl, onProgress)

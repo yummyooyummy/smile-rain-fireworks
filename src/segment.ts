@@ -6,27 +6,17 @@
 // 低档机不开（退回椭圆）。这是这道题「系统 ROI」的取舍现场。
 
 import { coverMap, screenToVideoX, screenToVideoY, type CoverMap } from './view'
-
-const LOCAL_WASM_BASE = '/wasm'
-const CDN_WASM_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm'
-const LOCAL_MODEL = '/models/selfie_segmenter.tflite'
-const CDN_MODEL =
-  'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite'
+import {
+  CDN_SEG_MODEL,
+  CDN_WASM_BASE,
+  LOCAL_SEG_MODEL,
+  LOCAL_WASM_BASE,
+  exists,
+} from './assets'
 
 // 送进模型的帧尺寸。模型内部是 256×256，送 640×480 只是多付一次缩放和四倍的遮罩传输。
 const SEND_W = 256
 const SEND_H = 192
-
-async function exists(url: string): Promise<boolean> {
-  try {
-    const r = await fetch(url, { method: 'HEAD' })
-    // Vite dev server 对不存在的路径会回 index.html（SPA 兜底），HEAD 也是 200——
-    // 必须再看 content-type，否则会把一页 HTML 当模型喂给 MediaPipe（"not a valid Flatbuffer"）
-    return r.ok && !(r.headers.get('content-type') || '').includes('text/html')
-  } catch {
-    return false
-  }
-}
 
 export interface PersonCollider {
   isPerson(sx: number, sy: number): boolean
@@ -75,7 +65,7 @@ export class PersonMask implements PersonCollider {
     if (this.worker) return
     this.lastError = ''
     const wasmBase = (await exists(`${LOCAL_WASM_BASE}/vision_wasm_internal.js`)) ? LOCAL_WASM_BASE : CDN_WASM_BASE
-    const modelUrl = (await exists(LOCAL_MODEL)) ? LOCAL_MODEL : CDN_MODEL
+    const modelUrl = (await exists(LOCAL_SEG_MODEL)) ? LOCAL_SEG_MODEL : CDN_SEG_MODEL
     const worker = new Worker(new URL('./segment.worker.ts', import.meta.url), { type: 'module' })
     this.worker = worker
     worker.onmessage = (e) => this.onMessage(e.data)
@@ -83,7 +73,11 @@ export class PersonMask implements PersonCollider {
       this.lastError = `worker: ${e.message}`.slice(0, 120)
       this.stop()
     }
-    worker.postMessage({ type: 'init', wasmBase: new URL(wasmBase, location.href).href, modelUrl })
+    worker.postMessage({
+      type: 'init',
+      wasmBase: new URL(wasmBase, location.href).href,
+      modelUrl: new URL(modelUrl, location.href).href,
+    })
   }
 
   private onMessage(m: { type: string; [k: string]: unknown }): void {
