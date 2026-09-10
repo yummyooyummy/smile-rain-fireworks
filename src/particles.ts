@@ -1,9 +1,15 @@
-// 粒子引擎：雨 + 烟花 + 头部椭圆碰撞。
+// 粒子引擎：雨 + 烟花（升空 → 爆炸 → 下落）+ 头部椭圆碰撞。
 //
 // 性能约定（对应 CLAUDE.md）：
 //  - 所有粒子数据放在预分配的 Float32Array（SoA）里，update/draw 循环内零分配。
 //  - 发光用预渲染的径向渐变贴图 drawImage + 'lighter'，绝不用 shadowBlur。
 //  - 碰撞只做「粒子 vs 一个椭圆」，没有粒子间碰撞，复杂度 O(n)。
+//
+// 两条视觉规则值得单独说明：
+//  1. 雨不会被头部「吃掉」。早期版本让雨撞到椭圆就消失，结果脸上出现一个
+//     硬边的圆形空洞，非常假。现在雨只在头顶那段弧线上溅出水花，雨滴本身继续下落。
+//  2. 烟花从画面底部升空、在高处炸开、粒子受重力下落——而不是从嘴里喷出来。
+//     落到头上的粒子会分裂成更小的粒子向四周溅开。
 
 import type { EffectConfig, Tier } from './config'
 
@@ -23,18 +29,24 @@ const PALETTE: [number, number, number][] = [
 ]
 const RAIN_RGB: [number, number, number] = [191, 212, 242] // #BFD4F2
 
-const RAIN_LAYER_SPEED = [300, 480, 720] // px/s
-const RAIN_LAYER_ALPHA = [0.25, 0.45, 0.7]
-const RAIN_LAYER_WIDTH = [1, 1.4, 1.9]
+// 三层景深：远层又慢又细又淡，近层又快又长又亮，横向漂移也拉开，产生视差。
+// 差异必须够大才看得出「景深」——差 20% 是看不出来的。
+const RAIN_SPEED = [240, 520, 920] // px/s
+const RAIN_ALPHA = [0.16, 0.4, 0.8]
+const RAIN_WIDTH = [0.8, 1.6, 2.6]
+const RAIN_DRIFT = [10, 24, 44] // px/s 横向漂移
+const RAIN_STREAK = 0.032 // 拖尾长度 = 速度 × 这个系数
+const RAIN_LAYER_WEIGHT = [0.5, 0.32, 0.18] // 远层最多，近层最少
 
-const GRAVITY = 380 // px/s²
+const GRAVITY = 300 // px/s²（比真实重力慢，粒子才有时间飘落到人身上再碰撞）
 const SPARK_DRAG = 0.985 // 每 1/60 秒
 const MAX_SPLASH_PER_FRAME = 2
 const FLASH_MS = 50
-const PULSE_MS = 100
+const PULSE_MS = 120
 const PULSE_COOLDOWN_MS = 200
+const MAX_ROCKETS = 8
 
-/** 把 [r,g,b] 按色相偏移旋转，返回 CSS 颜色的三个分量 */
+/** 把 [r,g,b] 按色相偏移旋转 */
 function rotateHue(rgb: [number, number, number], deg: number, out: Float32Array, i: number): void {
   if (deg === 0) {
     out[i] = rgb[0]
@@ -45,7 +57,6 @@ function rotateHue(rgb: [number, number, number], deg: number, out: Float32Array
   const a = (deg * Math.PI) / 180
   const cos = Math.cos(a)
   const sin = Math.sin(a)
-  // YIQ 近似色相旋转矩阵，够快也够准
   const [r, g, b] = rgb
   out[i] = clamp255(
     (0.213 + cos * 0.787 - sin * 0.213) * r +
@@ -68,9 +79,17 @@ function clamp255(v: number): number {
   return v < 0 ? 0 : v > 255 ? 255 : v
 }
 
+function pickLayer(): number {
+  const r = Math.random()
+  if (r < RAIN_LAYER_WEIGHT[0]) return 0
+  if (r < RAIN_LAYER_WEIGHT[0] + RAIN_LAYER_WEIGHT[1]) return 1
+  return 2
+}
+
 export interface EffectStats {
   rainAlive: number
   sparkAlive: number
+  rocketAlive: number
   collisions: number
 }
 
@@ -86,18 +105,20 @@ export class Effects {
   private rx!: Float32Array
   private ry!: Float32Array
   private rvy!: Float32Array
+  private rvx!: Float32Array
   private rlen!: Float32Array
   private rlayer!: Uint8Array
+  private rsplashed!: Uint8Array
   private rAlive!: Uint8Array
   private rainCap = 0
   private rainCursor = 0
   private rainAlive = 0
-  private rainBudget = 0 // 累积的生成配额（小数）
+  private rainBudget = 0
 
   // ---- 火花池（SoA）----
   private sx!: Float32Array
   private sy!: Float32Array
-  private spx!: Float32Array // 上一帧位置，用于画拖尾
+  private spx!: Float32Array
   private spy!: Float32Array
   private svx!: Float32Array
   private svy!: Float32Array
@@ -105,24 +126,35 @@ export class Effects {
   private smax!: Float32Array
   private ssize!: Float32Array
   private scolor!: Uint8Array
-  private sflash!: Float32Array // 碰撞闪白剩余毫秒
+  private sflash!: Float32Array
+  private sgen!: Uint8Array // 0 = 爆炸粒子（撞头会分裂）；1 = 分裂出来的碎片（不再分裂）
   private sAlive!: Uint8Array
   private sparkCap = 0
   private sparkCursor = 0
   private sparkAlive = 0
 
+  // ---- 升空的烟花弹（数量很少，独立小池）----
+  private kx = new Float32Array(MAX_ROCKETS)
+  private ky = new Float32Array(MAX_ROCKETS)
+  private kvx = new Float32Array(MAX_ROCKETS)
+  private kvy = new Float32Array(MAX_ROCKETS)
+  private kay = new Float32Array(MAX_ROCKETS)
+  private kpower = new Float32Array(MAX_ROCKETS)
+  private kscale = new Float32Array(MAX_ROCKETS)
+  private kcolor = new Uint8Array(MAX_ROCKETS)
+  private kAlive = new Uint8Array(MAX_ROCKETS)
+  private rocketAlive = 0
+
   // ---- 发光贴图 ----
   private glow: HTMLCanvasElement[] = []
   private glowSize = 64
 
-  // ---- 调色板（应用色相偏移后的实际颜色）----
   private palette = new Float32Array(PALETTE.length * 3)
   private rainColor = new Float32Array(3)
   private appliedHue = NaN
 
-  // ---- 运行时 ----
-  private rainRate = 0 // 0–1
-  private headPulse = 0 // 剩余毫秒
+  private rainRate = 0
+  private headPulse = 0
   private headPulseCooldown = 0
   private collisions = 0
   private splashesThisFrame = 0
@@ -160,7 +192,6 @@ export class Effects {
   setTier(tier: Tier): void {
     if (tier.name === this.tier.name) return
     this.tier = tier
-    // 只在变大时重新分配，变小时保留数组、压低使用上限，避免运行中反复 GC
     if (tier.rainMax > this.rainCap) this.allocRain(tier.rainMax)
     if (tier.sparkPool > this.sparkCap) this.allocSpark(tier.sparkPool)
   }
@@ -169,13 +200,17 @@ export class Effects {
     return this.tier
   }
 
-  /** 微笑强度映射后的雨量，0–1 */
   setRainRate(rate: number): void {
     this.rainRate = rate < 0 ? 0 : rate > 1 ? 1 : rate
   }
 
   get stats(): EffectStats {
-    return { rainAlive: this.rainAlive, sparkAlive: this.sparkAlive, collisions: this.collisions }
+    return {
+      rainAlive: this.rainAlive,
+      sparkAlive: this.sparkAlive,
+      rocketAlive: this.rocketAlive,
+      collisions: this.collisions,
+    }
   }
 
   // ---------- 分配 ----------
@@ -185,8 +220,10 @@ export class Effects {
     this.rx = new Float32Array(cap)
     this.ry = new Float32Array(cap)
     this.rvy = new Float32Array(cap)
+    this.rvx = new Float32Array(cap)
     this.rlen = new Float32Array(cap)
     this.rlayer = new Uint8Array(cap)
+    this.rsplashed = new Uint8Array(cap)
     this.rAlive = new Uint8Array(cap)
     this.rainAlive = 0
     this.rainCursor = 0
@@ -205,6 +242,7 @@ export class Effects {
     this.ssize = new Float32Array(cap)
     this.scolor = new Uint8Array(cap)
     this.sflash = new Float32Array(cap)
+    this.sgen = new Uint8Array(cap)
     this.sAlive = new Uint8Array(cap)
     this.sparkAlive = 0
     this.sparkCursor = 0
@@ -220,7 +258,6 @@ export class Effects {
     this.buildGlow()
   }
 
-  /** 每种颜色预渲染一张径向渐变贴图，draw 时只 drawImage */
   private buildGlow(): void {
     const size = this.glowSize
     this.glow = []
@@ -239,7 +276,6 @@ export class Effects {
       g.fillRect(0, 0, size, size)
       this.glow.push(c)
     }
-    // 额外一张纯白，用于碰撞闪白
     const wcv = document.createElement('canvas')
     wcv.width = wcv.height = size
     const wg = wcv.getContext('2d')!
@@ -254,15 +290,49 @@ export class Effects {
 
   // ---------- 发射 ----------
 
-  /** 从 (x,y) 炸开一发烟花。power 0–1 控制爆炸半径与粒子数。 */
+  /**
+   * 从画面底部发射一枚烟花弹，升到高处再炸开。
+   * power 0–1 控制爆炸规模，scale 控制这一发是「大烟花」还是补发的小烟花。
+   */
+  launch(power: number, scale = 1): void {
+    let idx = -1
+    for (let i = 0; i < MAX_ROCKETS; i++) {
+      if (!this.kAlive[i]) {
+        idx = i
+        break
+      }
+    }
+    if (idx < 0) return // 同屏烟花弹已满，直接丢弃
+
+    const x = this.w * (0.12 + Math.random() * 0.76)
+    const y0 = this.h + 12
+    // 炸开高度落在画面上半部；scale 小的补发烟花炸得低一点、快一点
+    const targetY = this.h * (0.12 + Math.random() * 0.26) * (scale < 0.6 ? 1.5 : 1)
+    const riseTime = (0.5 + Math.random() * 0.22) * (scale < 0.6 ? 0.75 : 1)
+    const d = y0 - targetY
+    const v0 = (2 * d) / riseTime // 匀减速到顶点
+
+    this.kAlive[idx] = 1
+    this.rocketAlive++
+    this.kx[idx] = x
+    this.ky[idx] = y0
+    this.kvx[idx] = (Math.random() - 0.5) * 70
+    this.kvy[idx] = -v0
+    this.kay[idx] = v0 / riseTime
+    this.kpower[idx] = power
+    this.kscale[idx] = scale
+    this.kcolor[idx] = (Math.random() * PALETTE.length) | 0
+  }
+
+  /** 在指定位置直接炸开（升空到顶点后由 update 调用；也可单独用于调试） */
   burst(x: number, y: number, power: number, scale = 1): void {
     const base = Math.min(this.cfg.fireworkCount, this.tier.sparkPerBurst)
     const count = Math.max(12, Math.round(base * scale * (0.55 + 0.45 * power)))
-    const speed = 190 + 210 * power
+    const speed = 200 + 230 * power
+    const hue = (Math.random() * PALETTE.length) | 0
     for (let i = 0; i < count; i++) {
       const idx = this.acquireSpark()
       if (idx < 0) break
-      // 均匀方向 + 轻微向上偏置，让烟花看起来是「炸开」而不是「散落」
       const ang = Math.random() * Math.PI * 2
       const sp = speed * (0.35 + Math.random() * 0.65)
       this.sx[idx] = x
@@ -270,17 +340,47 @@ export class Effects {
       this.spx[idx] = x
       this.spy[idx] = y
       this.svx[idx] = Math.cos(ang) * sp
-      this.svy[idx] = Math.sin(ang) * sp - 40
-      const life = 0.75 + Math.random() * 0.8
+      this.svy[idx] = Math.sin(ang) * sp
+      const life = 1.15 + Math.random() * 1.05
       this.slife[idx] = life
       this.smax[idx] = life
       this.ssize[idx] = 5 + Math.random() * 7 * (0.6 + power * 0.4)
-      this.scolor[idx] = (Math.random() * PALETTE.length) | 0
+      // 一发烟花以一个主色为主，掺少量其它色，比纯随机好看
+      this.scolor[idx] = Math.random() < 0.75 ? hue : (Math.random() * PALETTE.length) | 0
       this.sflash[idx] = 0
+      this.sgen[idx] = 0
     }
   }
 
-  /** 雨滴撞头时的小水花 */
+  /** 烟花粒子撞到头：分裂成更小的粒子向四周溅开 */
+  private shatter(i: number, nx: number, ny: number): void {
+    const parentColor = this.scolor[i]
+    const parentSize = this.ssize[i]
+    const speed = Math.hypot(this.svx[i], this.svy[i])
+    const n = 3 + ((Math.random() * 3) | 0)
+    for (let k = 0; k < n; k++) {
+      const idx = this.acquireSpark()
+      if (idx < 0) break
+      // 以碰撞法线为中心，向四周散开
+      const ang = Math.atan2(ny, nx) + (Math.random() - 0.5) * 2.4
+      const sp = (60 + speed * 0.35) * (0.5 + Math.random() * 0.8)
+      this.sx[idx] = this.sx[i]
+      this.sy[idx] = this.sy[i]
+      this.spx[idx] = this.sx[i]
+      this.spy[idx] = this.sy[i]
+      this.svx[idx] = Math.cos(ang) * sp
+      this.svy[idx] = Math.sin(ang) * sp
+      const life = 0.3 + Math.random() * 0.35
+      this.slife[idx] = life
+      this.smax[idx] = life
+      this.ssize[idx] = parentSize * (0.35 + Math.random() * 0.2)
+      this.scolor[idx] = Math.random() < 0.5 ? parentColor : 2 // 掺一点奶白当火星
+      this.sflash[idx] = FLASH_MS
+      this.sgen[idx] = 1 // 碎片不再分裂，避免连锁
+    }
+  }
+
+  /** 雨滴打在头顶的小水花（雨滴本身不消失，避免脸上出现空洞） */
   private splash(x: number, y: number, nx: number, ny: number): void {
     if (this.splashesThisFrame >= MAX_SPLASH_PER_FRAME) return
     this.splashesThisFrame++
@@ -289,19 +389,20 @@ export class Effects {
       const idx = this.acquireSpark()
       if (idx < 0) return
       const spread = (Math.random() - 0.5) * 1.6
-      const sp = 70 + Math.random() * 90
+      const sp = 60 + Math.random() * 80
       this.sx[idx] = x
       this.sy[idx] = y
       this.spx[idx] = x
       this.spy[idx] = y
       this.svx[idx] = (nx + spread) * sp
-      this.svy[idx] = (ny - 0.5) * sp
-      const life = 0.22 + Math.random() * 0.18
+      this.svy[idx] = (ny - 0.4) * sp
+      const life = 0.2 + Math.random() * 0.16
       this.slife[idx] = life
       this.smax[idx] = life
-      this.ssize[idx] = 2.5 + Math.random() * 2
-      this.scolor[idx] = 2 // 奶白，接近水色
+      this.ssize[idx] = 2.2 + Math.random() * 1.8
+      this.scolor[idx] = 2
       this.sflash[idx] = 0
+      this.sgen[idx] = 1
     }
   }
 
@@ -319,7 +420,7 @@ export class Effects {
         return i
       }
     }
-    return -1 // 池满，直接丢弃，绝不扩容
+    return -1
   }
 
   private acquireRain(): number {
@@ -340,13 +441,15 @@ export class Effects {
   private spawnRain(): void {
     const idx = this.acquireRain()
     if (idx < 0) return
-    const layer = (Math.random() * 3) | 0
+    const layer = pickLayer()
     this.rlayer[idx] = layer
-    this.rx[idx] = Math.random() * (this.w + 120) - 60
-    this.ry[idx] = -20 - Math.random() * 120
-    const sp = RAIN_LAYER_SPEED[layer] * (0.9 + Math.random() * 0.2)
+    this.rx[idx] = Math.random() * (this.w + 160) - 80
+    this.ry[idx] = -30 - Math.random() * 160
+    const sp = RAIN_SPEED[layer] * (0.9 + Math.random() * 0.2)
     this.rvy[idx] = sp
-    this.rlen[idx] = sp * 0.028
+    this.rvx[idx] = RAIN_DRIFT[layer] * (0.8 + Math.random() * 0.4)
+    this.rlen[idx] = sp * RAIN_STREAK
+    this.rsplashed[idx] = 0
   }
 
   // ---------- 更新 ----------
@@ -359,8 +462,29 @@ export class Effects {
     if (this.headPulse > 0) this.headPulse -= dtMs
     if (this.headPulseCooldown > 0) this.headPulseCooldown -= dtMs
 
-    // --- 雨：按 rainRate 生成 ---
-    const targetRate = this.rainRate * this.tier.rainMax * this.cfg.rainMax * 1.6 // 每秒生成数
+    const hasHead = head !== null
+    const cx = hasHead ? head!.cx : 0
+    const cy = hasHead ? head!.cy : 0
+    const rx = hasHead ? head!.rx : 1
+    const ry = hasHead ? head!.ry : 1
+    const bottom = this.h + 60
+
+    // --- 烟花弹升空 ---
+    for (let i = 0; i < MAX_ROCKETS; i++) {
+      if (!this.kAlive[i]) continue
+      this.kvy[i] += this.kay[i] * dt
+      this.kx[i] += this.kvx[i] * dt
+      this.ky[i] += this.kvy[i] * dt
+      // 到达顶点（或飞出画面顶部）就炸开
+      if (this.kvy[i] >= 0 || this.ky[i] < 8) {
+        this.burst(this.kx[i], this.ky[i], this.kpower[i], this.kscale[i])
+        this.kAlive[i] = 0
+        this.rocketAlive--
+      }
+    }
+
+    // --- 雨：生成 ---
+    const targetRate = this.rainRate * this.tier.rainMax * this.cfg.rainMax * 1.7
     this.rainBudget += targetRate * dt
     if (this.rainBudget > 60) this.rainBudget = 60 // 配额封顶，避免掉帧后一次性喷一大坨
     while (this.rainBudget >= 1) {
@@ -368,36 +492,30 @@ export class Effects {
       this.spawnRain()
     }
 
-    const hasHead = head !== null
-    const cx = hasHead ? head!.cx : 0
-    const cy = hasHead ? head!.cy : 0
-    const rx = hasHead ? head!.rx : 1
-    const ry = hasHead ? head!.ry : 1
-    const bottom = this.h + 40
-
-    // --- 雨：积分 + 碰撞 ---
+    // --- 雨：积分 + 头顶溅射（不吃掉雨滴）---
     const rainCap = this.rainCap
     for (let i = 0; i < rainCap; i++) {
       if (!this.rAlive[i]) continue
       this.ry[i] += this.rvy[i] * dt
-      if (this.ry[i] > bottom) {
+      this.rx[i] += this.rvx[i] * dt
+      if (this.ry[i] > bottom || this.rx[i] > this.w + 90) {
         this.rAlive[i] = 0
         this.rainAlive--
         continue
       }
-      if (hasHead && this.rlayer[i] >= 1) {
+      // 只有近处两层、且还没溅过的雨滴，在头顶那段弧线上溅一次水花。
+      // 雨滴继续往下走——早期版本让它消失，脸上会出现一个硬边圆形空洞。
+      if (hasHead && this.rlayer[i] >= 1 && !this.rsplashed[i]) {
         const u = (this.rx[i] - cx) / rx
         const v = (this.ry[i] - cy) / ry
         if (u * u + v * v < 1) {
-          // 撞到头：溅开并消失
+          this.rsplashed[i] = 1
           let nx = u / rx
           let ny = v / ry
           const nl = Math.hypot(nx, ny) || 1
           nx /= nl
           ny /= nl
-          this.splash(this.rx[i], this.ry[i], nx, ny)
-          this.rAlive[i] = 0
-          this.rainAlive--
+          if (ny < -0.25) this.splash(this.rx[i], this.ry[i], nx, ny) // 只在上半弧
         }
       }
     }
@@ -437,7 +555,7 @@ export class Effects {
       const d2 = u * u + v * v
       if (d2 >= 1 || d2 === 0) continue
 
-      // 在椭圆内 → 推回边界 + 沿法线反弹
+      // 在椭圆内 → 推回边界，算出法线
       const s = 1 / Math.sqrt(d2)
       this.sx[i] = cx + u * s * rx
       this.sy[i] = cy + v * s * ry
@@ -446,18 +564,28 @@ export class Effects {
       const nl = Math.hypot(nx, ny) || 1
       nx /= nl
       ny /= nl
-      const vn = this.svx[i] * nx + this.svy[i] * ny
-      if (vn < 0) {
-        this.svx[i] -= (1 + rest) * vn * nx
-        this.svy[i] -= (1 + rest) * vn * ny
-        this.svx[i] *= 0.85
-        this.svy[i] *= 0.85
-      }
-      this.sflash[i] = FLASH_MS
+
       this.collisions++
       if (this.headPulseCooldown <= 0) {
         this.headPulse = PULSE_MS
         this.headPulseCooldown = PULSE_COOLDOWN_MS
+      }
+
+      if (this.sgen[i] === 0) {
+        // 爆炸粒子撞头 → 分裂成更小的粒子溅开，母粒子消失
+        this.shatter(i, nx, ny)
+        this.sAlive[i] = 0
+        this.sparkAlive--
+      } else {
+        // 碎片只反弹，不再分裂，避免连锁把粒子池打满
+        const vn = this.svx[i] * nx + this.svy[i] * ny
+        if (vn < 0) {
+          this.svx[i] -= (1 + rest) * vn * nx
+          this.svy[i] -= (1 + rest) * vn * ny
+          this.svx[i] *= 0.8
+          this.svy[i] *= 0.8
+        }
+        this.sflash[i] = FLASH_MS
       }
     }
   }
@@ -468,21 +596,22 @@ export class Effects {
     const ctx = this.ctx
     ctx.clearRect(0, 0, this.w, this.h)
 
-    // 雨：普通混合的细线，压在下面
+    // 雨：按层从远到近画，远层先画被近层压住，强化景深
     ctx.globalCompositeOperation = 'source-over'
     ctx.lineCap = 'round'
     const rc = `${this.rainColor[0] | 0},${this.rainColor[1] | 0},${this.rainColor[2] | 0}`
     for (let layer = 0; layer < 3; layer++) {
       ctx.beginPath()
-      ctx.strokeStyle = `rgba(${rc},${RAIN_LAYER_ALPHA[layer]})`
-      ctx.lineWidth = RAIN_LAYER_WIDTH[layer]
+      ctx.strokeStyle = `rgba(${rc},${RAIN_ALPHA[layer]})`
+      ctx.lineWidth = RAIN_WIDTH[layer]
       let any = false
+      const tail = RAIN_DRIFT[layer] * RAIN_STREAK
       for (let i = 0; i < this.rainCap; i++) {
         if (!this.rAlive[i] || this.rlayer[i] !== layer) continue
         const x = this.rx[i]
         const y = this.ry[i]
-        ctx.moveTo(x, y)
-        ctx.lineTo(x + 1.5, y + this.rlen[i])
+        ctx.moveTo(x - tail, y - this.rlen[i])
+        ctx.lineTo(x, y)
         any = true
       }
       if (any) ctx.stroke()
@@ -494,25 +623,40 @@ export class Effects {
       ctx.globalCompositeOperation = 'lighter'
       ctx.beginPath()
       ctx.ellipse(head.cx, head.cy, head.rx, head.ry, 0, 0, Math.PI * 2)
-      ctx.strokeStyle = `rgba(255,238,214,${0.35 * t})`
-      ctx.lineWidth = 2 + 6 * (1 - t)
+      ctx.strokeStyle = `rgba(255,238,214,${0.32 * t})`
+      ctx.lineWidth = 2 + 7 * (1 - t)
       ctx.stroke()
     }
 
-    // 火花：加色混合的发光贴图 + 拖尾
     ctx.globalCompositeOperation = 'lighter'
     const glow = this.glow
     const whiteIdx = glow.length - 1
+
+    // 升空中的烟花弹：一个亮点 + 一条尾焰
+    for (let i = 0; i < MAX_ROCKETS; i++) {
+      if (!this.kAlive[i]) continue
+      const c = this.kcolor[i] * 3
+      ctx.globalAlpha = 0.9
+      ctx.drawImage(glow[this.kcolor[i]], this.kx[i] - 11, this.ky[i] - 11, 22, 22)
+      ctx.globalAlpha = 0.45
+      ctx.beginPath()
+      ctx.strokeStyle = `rgb(${this.palette[c] | 0},${this.palette[c + 1] | 0},${this.palette[c + 2] | 0})`
+      ctx.lineWidth = 2
+      ctx.moveTo(this.kx[i], this.ky[i])
+      ctx.lineTo(this.kx[i] - this.kvx[i] * 0.05, this.ky[i] - this.kvy[i] * 0.05)
+      ctx.stroke()
+    }
+
+    // 火花
     for (let i = 0; i < this.sparkCap; i++) {
       if (!this.sAlive[i]) continue
-      const t = this.slife[i] / this.smax[i] // 1 → 0
-      const alpha = t * t
+      const t = this.slife[i] / this.smax[i]
+      const alpha = t * Math.sqrt(t) // 比 t² 衰减慢，火花亮得久一点
       const size = this.ssize[i] * (0.5 + 0.5 * t) * 3.2
       const half = size / 2
       const img = this.sflash[i] > 0 ? glow[whiteIdx] : glow[this.scolor[i]]
       ctx.globalAlpha = alpha
       ctx.drawImage(img, this.sx[i] - half, this.sy[i] - half, size, size)
-      // 拖尾：从上一帧位置到当前位置的一小段
       const dx = this.sx[i] - this.spx[i]
       const dy = this.sy[i] - this.spy[i]
       if (dx * dx + dy * dy > 4) {
