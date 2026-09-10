@@ -48,7 +48,8 @@ const GRAVITY = 300 // px/s²（比真实重力慢，粒子才有时间飘落到
 // 直觉版本 v *= 0.985 是线性衰减，快慢粒子一样减速，看起来「匀速散开的彩点」；
 // 真实烟花前 0.5 s 扩得最猛、然后骤然变慢开始飘落——这正是 v² 阻力的形状。
 const SPARK_K = 0.01 // 1/px；v0≈900 px/s 时 k·v0≈9/s：0.5 s 内扩到约 170 px，2 s 约 290 px
-const TRAIL_N = 9 // 每颗火花记最近 9 个位置，画成渐隐的拖尾
+const FADE_FILL = 'rgba(0,0,0,0.18)' // 烟花层每帧压暗的比例：越小拖尾越长
+const ROCKET_TRAIL = 14 // 烟花弹尾焰记的位置数
 const TWINKLE_RATE = 0.35 // 35% 的爆炸粒子会闪烁
 const CRACKLE_RATE = 0.3 // 30% 的爆炸粒子在燃尽前二次崩裂
 const FLASH_MS = 50
@@ -145,10 +146,6 @@ export class Effects {
   private stw!: Float32Array // 闪烁频率（Hz），0 = 不闪
   private sph!: Float32Array // 闪烁相位
   private scr!: Uint8Array // 1 = 还会二次崩裂
-  private shx!: Float32Array // 拖尾位置环：cap × TRAIL_N
-  private shy!: Float32Array
-  private shn!: Uint8Array // 环里已写入的点数（≤ TRAIL_N）
-  private shi!: Uint8Array // 环的写指针
   private sAlive!: Uint8Array
   private sparkCap = 0
   private sparkCursor = 0
@@ -163,6 +160,10 @@ export class Effects {
   private kpower = new Float32Array(MAX_ROCKETS)
   private kscale = new Float32Array(MAX_ROCKETS)
   private kcolor = new Uint8Array(MAX_ROCKETS)
+  private khx = new Float32Array(MAX_ROCKETS * ROCKET_TRAIL)
+  private khy = new Float32Array(MAX_ROCKETS * ROCKET_TRAIL)
+  private khn = new Uint8Array(MAX_ROCKETS)
+  private khi = new Uint8Array(MAX_ROCKETS)
   private kAlive = new Uint8Array(MAX_ROCKETS)
   private rocketAlive = 0
 
@@ -251,6 +252,8 @@ export class Effects {
 
   /** 退出回开始页时清空所有粒子。只清 alive 标志，不重新分配。 */
   clear(): void {
+    this.ctx.globalCompositeOperation = 'source-over'
+    this.ctx.clearRect(0, 0, this.w, this.h)
     this.rAlive.fill(0)
     this.sAlive.fill(0)
     this.kAlive.fill(0)
@@ -305,10 +308,6 @@ export class Effects {
     this.stw = new Float32Array(cap)
     this.sph = new Float32Array(cap)
     this.scr = new Uint8Array(cap)
-    this.shx = new Float32Array(cap * TRAIL_N)
-    this.shy = new Float32Array(cap * TRAIL_N)
-    this.shn = new Uint8Array(cap)
-    this.shi = new Uint8Array(cap)
     this.sAlive = new Uint8Array(cap)
     this.sparkAlive = 0
     this.sparkCursor = 0
@@ -408,6 +407,8 @@ export class Effects {
     this.kpower[idx] = power
     this.kscale[idx] = scale
     this.kcolor[idx] = (Math.random() * PALETTE.length) | 0
+    this.khn[idx] = 0
+    this.khi[idx] = 0
   }
 
   private addFlash(x: number, y: number, color: number, size: number): void {
@@ -459,8 +460,6 @@ export class Effects {
       this.stw[idx] = Math.random() < TWINKLE_RATE ? 6 + Math.random() * 9 : 0
       this.sph[idx] = Math.random() * 6.283
       this.scr[idx] = Math.random() < CRACKLE_RATE ? 1 : 0
-      this.shn[idx] = 0
-      this.shi[idx] = 0
     }
   }
 
@@ -498,8 +497,6 @@ export class Effects {
       this.stw[idx] = 12 + Math.random() * 10
       this.sph[idx] = Math.random() * 6.283
       this.scr[idx] = 0
-      this.shn[idx] = 0
-      this.shi[idx] = 0
     }
   }
 
@@ -531,8 +528,6 @@ export class Effects {
       this.stw[idx] = 0
       this.sph[idx] = 0
       this.scr[idx] = 0
-      this.shn[idx] = 0
-      this.shi[idx] = 0
     }
   }
 
@@ -607,6 +602,11 @@ export class Effects {
     // --- 烟花弹升空 ---
     for (let i = 0; i < MAX_ROCKETS; i++) {
       if (!this.kAlive[i]) continue
+      const hi = this.khi[i]
+      this.khx[i * ROCKET_TRAIL + hi] = this.kx[i]
+      this.khy[i * ROCKET_TRAIL + hi] = this.ky[i]
+      this.khi[i] = (hi + 1) % ROCKET_TRAIL
+      if (this.khn[i] < ROCKET_TRAIL) this.khn[i]++
       this.kvy[i] += this.kay[i] * dt
       this.kx[i] += this.kvx[i] * dt
       this.ky[i] += this.kvy[i] * dt
@@ -666,13 +666,6 @@ export class Effects {
 
       this.spx[i] = this.sx[i]
       this.spy[i] = this.sy[i]
-      // 拖尾：把上一帧位置写进环
-      const hi = this.shi[i]
-      this.shx[i * TRAIL_N + hi] = this.sx[i]
-      this.shy[i * TRAIL_N + hi] = this.sy[i]
-      this.shi[i] = (hi + 1) % TRAIL_N
-      if (this.shn[i] < TRAIL_N) this.shn[i]++
-
       // v² 阻力：ds = -k·s²·dt → s' = s / (1 + k·s·dt)，快的减得狠、慢的几乎不减
       const spd = Math.hypot(this.svx[i], this.svy[i])
       if (spd > 1) {
@@ -760,7 +753,14 @@ export class Effects {
   // ---------- 绘制 ----------
 
   draw(head: HeadEllipse | null): void {
-    this.ctx.clearRect(0, 0, this.w, this.h)
+    // 烟花层不清屏：把上一帧整体压暗 18%，每颗火花自然留下一条渐隐的光迹。
+    // 这是 Canvas 烟花的经典做法，比逐颗画折线拖尾便宜得多、也好看得多——
+    // 光迹是发光贴图叠加出来的，有粗细和亮度的自然衰减，不是一根硬线。
+    const ctx0 = this.ctx
+    ctx0.globalCompositeOperation = 'destination-out'
+    ctx0.globalAlpha = 1
+    ctx0.fillStyle = FADE_FILL
+    ctx0.fillRect(0, 0, this.w, this.h)
     if (this.rainCtx) this.rainCtx.clearRect(0, 0, this.w, this.h)
     // 雨画到人身后那层（若开启），其余都在最前面那层
     const rctx = this.rainCtx ?? this.ctx
@@ -793,18 +793,25 @@ export class Effects {
   /** 升空中的烟花弹：一个亮点 + 一条尾焰。画在人身后那层——它是从背景升起来的 */
   private drawRockets(ctx: CanvasRenderingContext2D): void {
     const glow = this.glow
+    const whiteIdx = glow.length - 1
     ctx.globalCompositeOperation = 'lighter'
     for (let i = 0; i < MAX_ROCKETS; i++) {
       if (!this.kAlive[i]) continue
+      // 彗尾：沿着最近 14 个位置画一串越来越小、越来越淡的光点，还随机抖一点火星
+      const n = this.khn[i]
+      const base = i * ROCKET_TRAIL
+      let idx = (this.khi[i] - n + ROCKET_TRAIL) % ROCKET_TRAIL
+      for (let k = 0; k < n; k++) {
+        const f = (k + 1) / n // 0 → 1，越接近弹头越亮
+        const r = 2 + 7 * f
+        ctx.globalAlpha = 0.12 + 0.5 * f * f
+        ctx.drawImage(glow[this.kcolor[i]], this.khx[base + idx] - r, this.khy[base + idx] - r, r * 2, r * 2)
+        idx = (idx + 1) % ROCKET_TRAIL
+      }
+      ctx.globalAlpha = 1
+      ctx.drawImage(glow[whiteIdx], this.kx[i] - 7, this.ky[i] - 7, 14, 14)
       ctx.globalAlpha = 0.9
-      ctx.drawImage(glow[this.kcolor[i]], this.kx[i] - 11, this.ky[i] - 11, 22, 22)
-      ctx.globalAlpha = 0.45
-      ctx.beginPath()
-      ctx.strokeStyle = this.paletteStroke[this.kcolor[i]]
-      ctx.lineWidth = 2
-      ctx.moveTo(this.kx[i], this.ky[i])
-      ctx.lineTo(this.kx[i] - this.kvx[i] * 0.05, this.ky[i] - this.kvy[i] * 0.05)
-      ctx.stroke()
+      ctx.drawImage(glow[this.kcolor[i]], this.kx[i] - 13, this.ky[i] - 13, 26, 26)
     }
     ctx.globalAlpha = 1
     ctx.globalCompositeOperation = 'source-over'
@@ -854,25 +861,7 @@ export class Effects {
       const c = this.scolor[i]
       const img = this.sflash[i] > 0 ? glow[whiteIdx] : glow[c]
 
-      // 拖尾：环里最老的点 → 当前位置，一条折线一次 stroke（460 颗 × 9 段逐段画会把手机拖垮）
-      const n = this.shn[i]
-      if (n >= 2) {
-        const base = i * TRAIL_N
-        let idx = (this.shi[i] - n + TRAIL_N) % TRAIL_N
-        ctx.globalAlpha = alpha * 0.4
-        ctx.lineWidth = Math.max(0.7, this.ssize[i] * 0.3 * t)
-        ctx.strokeStyle = this.paletteStroke[c]
-        ctx.beginPath()
-        ctx.moveTo(this.shx[base + idx], this.shy[base + idx])
-        for (let k = 1; k < n; k++) {
-          idx = (idx + 1) % TRAIL_N
-          ctx.lineTo(this.shx[base + idx], this.shy[base + idx])
-        }
-        ctx.lineTo(this.sx[i], this.sy[i])
-        ctx.stroke()
-      }
-
-      ctx.globalAlpha = alpha
+      ctx.globalAlpha = alpha * 0.85
       ctx.drawImage(img, this.sx[i] - half, this.sy[i] - half, size, size)
       // 余晖：刚炸开的 15% 时间里核心偏白（高温），之后回到本色，再随 alpha 暗下去
       if (t > 0.85 && this.sflash[i] <= 0) {

@@ -72,6 +72,11 @@ body {
 }
 
 /* L1 · 粒子层 */
+/* 显示碰撞体：抠出来的人本身就是碰撞体，染成青色就看见了 */
+#camFront.is-collider {
+  filter: sepia(1) hue-rotate(120deg) saturate(2.4) brightness(1.15);
+}
+
 #fx,
 #rain {
   position: absolute;

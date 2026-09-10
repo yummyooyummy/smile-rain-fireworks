@@ -54,6 +54,7 @@ function applyConfig(next: EffectConfig): void {
 
 let tier: Tier = flags.tier ? TIERS[flags.tier] : TIERS.mid
 const effects = new Effects(canvas, cfg, tier)
+effects.setRainLayer(rainCanvas) // 雨和烟花弹一直在自己的图层：烟花层靠余辉拖尾，不逐帧清屏
 const state = new ExpressionState(cfg)
 const face = new FaceTracker()
 // 人像分割：遮挡（雨在人身后）+ 像素级碰撞。只在中/高档开，低档退回头部椭圆。
@@ -149,12 +150,10 @@ function applySegTier(): void {
   segEvery = tier.name === 'high' ? 4 : 6
   if (want && !segOn) {
     segOn = true
-    effects.setRainLayer(rainCanvas)
     void person.init()
   } else if (!want && segOn) {
     segOn = false
     person.stop()
-    effects.setRainLayer(null)
   }
 }
 
@@ -358,8 +357,8 @@ function loop(now: number): void {
   state.update(sig, dt)
 
   // 4. 发射：烟花从画面底部升空，到高处再炸开，粒子受重力落到人身上
-  if (state.burstPending) {
-    state.burstPending = false
+  while (state.burstCount > 0) {
+    state.burstCount--
     effects.launch(state.burstPower, state.burstScale, cameraOn ? sig.head : testHeadOn && cfg.showDebug ? testHead : null)
   }
   effects.setRainRate(state.rainRate)
@@ -371,10 +370,8 @@ function loop(now: number): void {
 
   // 6. 绘制（人像模式下头部脉冲那圈椭圆没有意义，不画）
   effects.draw(usePerson ? null : head)
-  if (cfg.showDebug || cfg.showCollider) {
-    if (usePerson) person.drawDebug(effects.ctx2d, w)
-    else if (head) effects.drawDebugHead(head)
-  }
+  camFront.classList.toggle('is-collider', (cfg.showDebug || cfg.showCollider) && usePerson)
+  if ((cfg.showDebug || cfg.showCollider) && !usePerson && head) effects.drawDebugHead(head)
 
   // 7. HUD
   if (cameraOn) noFaceMs = sig.faceOk ? 0 : noFaceMs + dt * 1000

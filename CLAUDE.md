@@ -69,7 +69,7 @@ camera → face(信号总线) → state(状态机) → particles(发射器 + 碰
 持续时长用毫秒而非帧数，因此与帧率无关（注释里标了按 20 Hz 折算的帧数）。
 进入阈值高于退出阈值 = 迟滞，临界值附近不闪烁。
 
-**爆发不是状态，是 Laughing 内部的事件**：进入即发射一枚大烟花弹 → 冷却 1.2 s → 冷却内每 0.6 s 补一枚小的。
+**爆发不是状态，是 Laughing 内部的事件**：进入即三枚齐发 → 每 0.9 s 两枚大的 → 间隙每 0.4 s 补一枚小的。`burstCount` 是计数不是布尔，main 逐枚 launch。
 烟花是 `effects.launch(power, scale)`——从画面底部升空、到顶点自动炸开，**不是从嘴里喷出来**。
 离开 Laughing 后 1.5 s 内继续稀疏补发（情绪残留）。
 
@@ -97,6 +97,8 @@ Laughing 期间雨量目标恒为 0。进度条是两根：`smileProgress`、`la
   `new` / `push` / `splice` / `filter` / 创建闭包 / 拼字符串。
 - 单一 `requestAnimationFrame` 循环；video 分辨率 640×480；DPR 上限 2。
 - 发光 = 预渲染径向渐变贴图 `drawImage` + `globalCompositeOperation='lighter'`。
+- **烟花层不清屏**：每帧用 `destination-out` 压暗 18%，火花的光迹靠余辉自然形成，不画折线拖尾。
+  雨和烟花弹在 `#rain` 层（逐帧清屏），烟花弹的彗尾用 14 点位置环手画。
   **禁止 `shadowBlur`**（每颗粒子一次模糊会直接掉到 10 fps）。
 - 碰撞只做「粒子 vs 一个带旋转的椭圆」，无粒子间碰撞，O(n)。
 - 池满时直接丢弃新粒子，绝不动态扩容。

@@ -24,8 +24,8 @@ const RAIN_FADE_IN = 0.4 // 秒
 const RAIN_CUT_OUT = 0.4
 const RAIN_FADE_OUT = 0.8
 
-const BURST_COOLDOWN = 1.2 // 大烟花间隔
-const SMALL_BURST_EVERY = 0.6 // 冷却期内的补发间隔
+const BURST_COOLDOWN = 0.9 // 大烟花间隔
+const SMALL_BURST_EVERY = 0.4 // 冷却期内的补发间隔
 const RESIDUE_TIME = 1.5 // 情绪残留：离开大笑后余韵时长
 const RESIDUE_BURST_EVERY = 0.5
 
@@ -40,7 +40,8 @@ export class ExpressionState {
   /** 雨量 0–1，已含缓入缓出 */
   rainRate = 0
   /** 本帧是否要发一发烟花（main 读完自行清空） */
-  burstPending = false
+  /** 这一帧要发射的烟花弹数；main 逐枚 launch 后清零 */
+  burstCount = 0
   burstPower = 0
   burstScale = 1
 
@@ -86,7 +87,7 @@ export class ExpressionState {
   reset(): void {
     this.mode = 'idle'
     this.rainRate = 0
-    this.burstPending = false
+    this.burstCount = 0
     this.burstPower = 0
     this.burstScale = 1
     this.smileProgress = 0
@@ -109,7 +110,7 @@ export class ExpressionState {
   }
 
   forceBurst(): void {
-    this.burstPending = true
+    this.burstCount += 2
     this.burstPower = 0.75
     this.burstScale = 1
   }
@@ -199,7 +200,7 @@ export class ExpressionState {
       this.burstCooldown -= dt
       this.smallBurstTimer -= dt
       if (this.burstCooldown <= 0) {
-        this.emit(sig.jawOpen, 1)
+        this.emit(sig.jawOpen, 1, 2)
         this.burstCooldown = BURST_COOLDOWN
         this.smallBurstTimer = SMALL_BURST_EVERY
       } else if (this.smallBurstTimer <= 0) {
@@ -264,7 +265,7 @@ export class ExpressionState {
     this.reachedLaugh = true
     this.tLaughEnter = 0
     this.residue = 0
-    this.emit(sig.jawOpen, 1)
+    this.emit(sig.jawOpen, 1, 3)
     this.burstCooldown = BURST_COOLDOWN
     this.smallBurstTimer = SMALL_BURST_EVERY
   }
@@ -276,8 +277,8 @@ export class ExpressionState {
     }
   }
 
-  private emit(power: number, scale: number): void {
-    this.burstPending = true
+  private emit(power: number, scale: number, n = 1): void {
+    this.burstCount += n
     this.burstPower = Math.min(1, Math.max(0.15, power))
     this.burstScale = scale
   }
