@@ -67,7 +67,6 @@ export class Hud {
   private toastTimer = 0
   private startHideTimer = 0
   private guideHideTimer = 0
-  private uiHidden = false
 
   constructor(root: HTMLElement, cb: HudCallbacks, person: PersonMask) {
     this.root = root
@@ -375,13 +374,8 @@ export class Hud {
   }
 
   setUiHidden(on: boolean): void {
-    this.uiHidden = on
     this.root.classList.toggle('is-ui-hidden', on)
     this.uiDot.hidden = !on
-  }
-
-  get isUiHidden(): boolean {
-    return this.uiHidden
   }
 
   // ---------- 截图分享 ----------
