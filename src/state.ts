@@ -74,12 +74,33 @@ export class ExpressionState {
     this.cfg = cfg
   }
 
-  /** 手动触发（右下角按钮 / 调试键盘）：绕过表情直接进模式 */
   /** 重看引导：把三个「已经做到过」的标记清空，引导会从第一步重新走。 */
   resetGuide(): void {
     this.reachedSmile = false
     this.reachedLaugh = false
     this.reachedCollision = false
+  }
+
+  /** 退出回开始页：模式、雨量、残留烟花、手动触发全部清掉。 */
+  reset(): void {
+    this.mode = 'idle'
+    this.rainRate = 0
+    this.burstPending = false
+    this.burstPower = 0
+    this.burstScale = 1
+    this.smileProgress = 0
+    this.laughProgress = 0
+    this.resetGuide()
+    this.tSmileEnter = 0
+    this.tSmileExit = 0
+    this.tLaughEnter = 0
+    this.tLaughExit = 0
+    this.tNoFace = 0
+    this.burstCooldown = 0
+    this.smallBurstTimer = 0
+    this.residue = 0
+    this.residueTimer = 0
+    this.manualRain = 0
   }
 
   forceRain(seconds = 3): void {

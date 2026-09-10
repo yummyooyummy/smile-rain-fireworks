@@ -245,7 +245,7 @@ function exitToStart(): void {
   inScene = false
   effects.clear()
   effects.setRainRate(0)
-  state.resetGuide()
+  state.reset()
   guideDone = false
   guideDoneAt = 0
   hud.showStart()
