@@ -11,7 +11,7 @@
 //     落到头上的粒子会分裂成更小的粒子向四周溅开。
 
 import type { PersonCollider } from './segment'
-import type { EffectConfig, Tier } from './config'
+import { TIERS, type EffectConfig, type Tier } from './config'
 
 export interface HeadEllipse {
   cx: number
@@ -181,8 +181,8 @@ export class Effects {
     this.cfg = cfg
     this.tier = tier
     this.applyPalette()
-    this.allocRain(tier.rainMax)
-    this.allocSpark(tier.sparkPool)
+    this.allocRain(TIERS.high.rainMax)
+    this.allocSpark(TIERS.high.sparkPool)
     this.buildGlow()
   }
 
@@ -215,8 +215,6 @@ export class Effects {
   setTier(tier: Tier): void {
     if (tier.name === this.tier.name) return
     this.tier = tier
-    if (tier.rainMax > this.rainCap) this.allocRain(tier.rainMax)
-    if (tier.sparkPool > this.sparkCap) this.allocSpark(tier.sparkPool)
   }
 
   get currentTier(): Tier {
