@@ -1,0 +1,10 @@
+node_modules
+dist
+.DS_Store
+*.local
+.vercel
+
+# 由 scripts/prepare-assets.mjs 生成
+public/wasm
+public/models
+vite.config.ts.timestamp-*
