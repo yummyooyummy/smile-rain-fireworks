@@ -63,6 +63,7 @@ export class Hud {
   private sharing = false
   private toastTimer = 0
   private startHideTimer = 0
+  private guideHideTimer = 0
   private uiHidden = false
 
   constructor(root: HTMLElement, cb: HudCallbacks) {
@@ -330,6 +331,10 @@ export class Hud {
       window.clearTimeout(this.startHideTimer)
       this.startHideTimer = 0
     }
+    if (this.guideHideTimer) {
+      window.clearTimeout(this.guideHideTimer)
+      this.guideHideTimer = 0
+    }
     this.setUiHidden(false)
     this.topbar.hidden = true
     this.manualBtn.hidden = true
@@ -440,14 +445,18 @@ export class Hud {
   /** text: null = 整块隐藏；'' = 文字淡出、只留两根条 */
   setGuide(text: string | null, smile: number, laugh: number): void {
     if (text === null) {
-      if (!this.guideWrap.hidden) {
-        this.guideWrap.classList.add('is-gone')
-        window.setTimeout(() => {
-          this.guideWrap.hidden = true
-          this.guideWrap.classList.remove('is-gone')
-        }, 500)
-      }
+      if (this.guideWrap.hidden || this.guideHideTimer) return
+      this.guideWrap.classList.add('is-gone')
+      this.guideHideTimer = window.setTimeout(() => {
+        this.guideWrap.hidden = true
+        this.guideWrap.classList.remove('is-gone')
+        this.guideHideTimer = 0
+      }, 500)
       return
+    }
+    if (this.guideHideTimer) {
+      window.clearTimeout(this.guideHideTimer)
+      this.guideHideTimer = 0
     }
     this.guideWrap.hidden = false
     this.guideWrap.classList.remove('is-gone')
