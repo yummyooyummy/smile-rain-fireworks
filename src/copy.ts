@@ -76,7 +76,6 @@ export const copy = {
     burstScale: '烟花范围',
     restitution: '碰撞弹性',
     hueShift: '色调偏移',
-    showGuide: '显示提示与进度条',
     showDebug: '显示调试数据',
     showCollider: '显示碰撞体',
     personSeg: '人像遮挡与碰撞（低档机自动关）',
