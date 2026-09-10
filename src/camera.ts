@@ -57,6 +57,7 @@ export async function startCamera(video: HTMLVideoElement): Promise<MediaStream>
     if (name === 'NotAllowedError' || name === 'SecurityError') throw new CameraError_('denied')
     if (name === 'NotFoundError' || name === 'OverconstrainedError')
       throw new CameraError_('unsupported')
+    if (name === 'NotReadableError') throw new CameraError_('timeout')
     throw new CameraError_('unknown')
   } finally {
     clearTimeout(timer)

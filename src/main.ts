@@ -187,7 +187,7 @@ async function connect(fromStart: boolean): Promise<void> {
       e instanceof CameraError_
         ? e.kind === 'denied'
           ? 'denied'
-          : e.kind === 'timeout'
+          : e.kind === 'timeout' || e.kind === 'unknown'
             ? 'timeout'
             : 'unsupported'
         : 'unsupported'
