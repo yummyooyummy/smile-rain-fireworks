@@ -187,6 +187,7 @@ export class Effects {
   private pulseStroke = 'rgb(255,238,214)'
 
   private rainRate = 0
+  private windT = 0
   private headPulse = 0
   private headPulseCooldown = 0
   private collisions = 0
@@ -543,7 +544,9 @@ export class Effects {
     const k = this.rainK
     const sp = RAIN_SPEED[layer] * (0.9 + Math.random() * 0.2) * k
     this.rvy[idx] = sp
-    this.rvx[idx] = RAIN_DRIFT[layer] * (0.8 + Math.random() * 0.4) * k
+    const wind =
+      (1 + 0.35 * Math.sin(this.windT * 1.4)) * (1 + 0.2 * Math.sin(this.windT * 0.37))
+    this.rvx[idx] = RAIN_DRIFT[layer] * (0.8 + Math.random() * 0.4) * k * wind
     this.rlen[idx] = sp * RAIN_STREAK
   }
 
@@ -551,6 +554,7 @@ export class Effects {
 
   update(dt: number, head: HeadEllipse | null, person: PersonCollider | null = null): void {
     this.collisions = 0
+    this.windT += dt
     const dtMs = dt * 1000
 
     if (this.headPulse > 0) this.headPulse -= dtMs
@@ -741,21 +745,39 @@ export class Effects {
   private drawRain(ctx: CanvasRenderingContext2D): void {
     ctx.globalCompositeOperation = 'source-over'
     ctx.lineCap = 'round'
+    const wind =
+      (1 + 0.35 * Math.sin(this.windT * 1.4)) * (1 + 0.2 * Math.sin(this.windT * 0.37))
     for (let layer = 0; layer < 3; layer++) {
-      ctx.beginPath()
       ctx.strokeStyle = this.rainStroke[layer]
       ctx.lineWidth = Math.max(0.6, RAIN_WIDTH[layer] * this.rainK)
+      const tail = RAIN_DRIFT[layer] * RAIN_STREAK * this.rainK * wind
+      // 尾段（上半）alpha × 0.35，头段（下半）alpha × 1；每层两次 stroke，不用 gradient
+      ctx.globalAlpha = 0.35
+      ctx.beginPath()
       let any = false
-      const tail = RAIN_DRIFT[layer] * RAIN_STREAK * this.rainK
       for (let i = 0; i < this.rainCap; i++) {
         if (!this.rAlive[i] || this.rlayer[i] !== layer) continue
         const x = this.rx[i]
         const y = this.ry[i]
-        ctx.moveTo(x - tail, y - this.rlen[i])
-        ctx.lineTo(x, y)
+        const len = this.rlen[i]
+        ctx.moveTo(x - tail, y - len)
+        ctx.lineTo(x - tail * 0.5, y - len * 0.5)
         any = true
       }
       if (any) ctx.stroke()
+      ctx.globalAlpha = 1
+      ctx.beginPath()
+      if (any) {
+        for (let i = 0; i < this.rainCap; i++) {
+          if (!this.rAlive[i] || this.rlayer[i] !== layer) continue
+          const x = this.rx[i]
+          const y = this.ry[i]
+          const len = this.rlen[i]
+          ctx.moveTo(x - tail * 0.5, y - len * 0.5)
+          ctx.lineTo(x, y)
+        }
+        ctx.stroke()
+      }
     }
   }
 
