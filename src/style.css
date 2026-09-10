@@ -1,0 +1,353 @@
+/* 暗调暖色。单一视觉世界，不做浅色主题——它永远盖在摄像头画面上。 */
+
+:root {
+  --ink: #f5ede6;
+  --muted: #a4948a;
+  --ground: #14100f;
+  --ground-2: #1e1815;
+  --line: rgba(245, 237, 230, 0.14);
+  --accent: #f0785a;
+  --gold: #e9b95a;
+  --rain: #bfd4f2;
+  --shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* 关键：.error/.manual 等元素在 CSS 里设了 display:grid/flex，会盖过 [hidden] 的默认
+   display:none，导致隐藏的全屏遮罩仍然拦截点击。必须显式压掉。 */
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei',
+    system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+#stage {
+  position: fixed;
+  inset: 0;
+}
+
+/* L0 · 摄像头，CSS 镜像。face.ts 里对 x 做同样的翻转。 */
+#cam {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+  background: var(--ground);
+}
+
+/* L1 · 粒子层 */
+#fx {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* L2 · HUD */
+#hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+#hud button {
+  pointer-events: auto;
+  font: inherit;
+}
+
+/* ---------- 开始页 ---------- */
+
+.start {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(240, 120, 90, 0.16), transparent 60%),
+    radial-gradient(90% 70% at 50% 110%, rgba(233, 185, 90, 0.1), transparent 60%),
+    var(--ground);
+  pointer-events: auto;
+  transition:
+    opacity 0.4s ease,
+    transform 0.4s ease;
+}
+
+.start.is-gone {
+  opacity: 0;
+  transform: scale(1.03);
+  pointer-events: none;
+}
+
+.start-inner {
+  max-width: 30rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  align-items: center;
+}
+
+.start-title {
+  margin: 0;
+  font-size: clamp(1.9rem, 7vw, 2.7rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-wrap: balance;
+  line-height: 1.25;
+}
+
+.start-sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.75;
+  max-width: 26rem;
+}
+
+.start-privacy {
+  margin: 0;
+  color: rgba(164, 148, 138, 0.7);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+
+.btn-primary,
+.btn-ghost {
+  border: 0;
+  border-radius: 999px;
+  padding: 13px 42px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    opacity 0.2s ease,
+    background 0.2s ease;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--gold));
+  color: #2a1206;
+  box-shadow: var(--shadow);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+.btn-primary:active,
+.btn-ghost:active {
+  transform: scale(0.97);
+}
+
+.btn-primary:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.btn-primary:focus-visible,
+.btn-ghost:focus-visible,
+.manual:focus-visible,
+.gear:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
+/* ---------- 引导：提示文字 + 其下的进度条 ---------- */
+
+.guide {
+  position: absolute;
+  left: 50%;
+  bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  transition: opacity 0.5s ease;
+  max-width: min(90vw, 22rem);
+}
+
+.guide.is-gone {
+  opacity: 0;
+}
+
+.guide-text {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  text-align: center;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.75);
+}
+
+.guide-bar {
+  width: 160px;
+  height: 3px;
+  border-radius: 3px;
+  background: rgba(245, 237, 230, 0.18);
+  overflow: hidden;
+}
+
+.guide-bar i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 0.12s linear;
+  background: var(--rain);
+}
+
+.guide-bar[data-phase='laugh'] i {
+  background: var(--accent);
+}
+
+/* ---------- 状态提示 ---------- */
+
+.status {
+  position: absolute;
+  left: 50%;
+  top: calc(22px + env(safe-area-inset-top, 0px));
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: rgba(20, 16, 15, 0.6);
+  backdrop-filter: blur(8px);
+  font-size: 0.82rem;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+/* ---------- 手动触发 ---------- */
+
+.manual {
+  position: absolute;
+  right: calc(20px + env(safe-area-inset-right, 0px));
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(20, 16, 15, 0.55);
+  backdrop-filter: blur(10px);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  touch-action: none;
+  transition: transform 0.15s ease;
+}
+
+.manual:active {
+  transform: scale(0.93);
+}
+
+.manual-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--gold));
+}
+
+/* ---------- 齿轮 ---------- */
+
+.gear {
+  position: absolute;
+  right: calc(18px + env(safe-area-inset-right, 0px));
+  top: calc(18px + env(safe-area-inset-top, 0px));
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(20, 16, 15, 0.45);
+  backdrop-filter: blur(8px);
+  color: var(--muted);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+/* ---------- 错误页 ---------- */
+
+.error {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(20, 16, 15, 0.92);
+  pointer-events: auto;
+}
+
+.error-inner {
+  max-width: 26rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+}
+
+.error-inner h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.error-inner p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.75;
+}
+
+.error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+/* ---------- 调试面板 ---------- */
+
+.debug {
+  position: absolute;
+  left: calc(14px + env(safe-area-inset-left, 0px));
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(20, 16, 15, 0.72);
+  border: 1px solid var(--line);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--gold);
+  white-space: pre;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+  }
+}
