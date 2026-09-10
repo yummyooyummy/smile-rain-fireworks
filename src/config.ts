@@ -114,10 +114,6 @@ export function readConfigOverride(search = location.search): Partial<EffectConf
   }
 }
 
-export function encodeConfig(cfg: EffectConfig): string {
-  return btoa(unescape(encodeURIComponent(JSON.stringify(cfg))))
-}
-
 export async function loadConfig(): Promise<EffectConfig> {
   let base: EffectConfig = { ...DEFAULT_CONFIG }
   try {
