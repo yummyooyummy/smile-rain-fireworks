@@ -199,6 +199,32 @@ README 已经有骨架了，不要重写已有内容，只补缺的部分：
 
 ---
 
+## Prompt 7 · 碰撞体可视化开关（新增，可以先做这个）
+
+```
+在调参抽屉里加一个「显示碰撞体」开关。
+
+改动范围（只有这三处，不要动别的）：
+1. src/config.ts：EffectConfig 加 showCollider: boolean，DEFAULT_CONFIG 里默认 false
+2. src/drawer.ts：在现有的 showGuide / showDebug 两个开关旁边加第三个，文案从 copy.drawer 取
+3. src/main.ts：绘制那一步，把
+     if (cfg.showDebug && head) effects.drawDebugHead(head)
+   改成
+     if ((cfg.showDebug || cfg.showCollider) && head) effects.drawDebugHead(head)
+4. src/copy.ts：drawer 里加 showCollider: '显示碰撞体'
+
+不要碰 particles.ts / face.ts / state.ts 的任何逻辑，drawDebugHead 已经存在且已支持旋转。
+验收：勾上开关后，画面上出现跟随头部旋转的青色椭圆；取消勾选后消失；
+刷新后跟随 effect.json 的默认值。做完单独 commit。
+```
+
+**为什么值得做**：头部碰撞体现在做了很多工作（36 点 PCA 拟合、跟随旋转、覆盖颅顶、
+One Euro 去抖），但这些改进**评审是看不见的**——他只会看到粒子撞到头上弹开。
+给一个开关让他亲眼看到那个椭圆稳稳地贴着头转，这些工作才算被看见。
+录 GIF 时也可以在中间几秒打开它。
+
+---
+
 ## 如果 Cursor 开始乱来
 
 它最可能犯的错和对应的话术：
