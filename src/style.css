@@ -23,6 +23,8 @@
   --grad-slider: linear-gradient(90deg, var(--accent), var(--gold));
   --gold-soft: rgba(233, 185, 90, 0.1);
   --ink-on-accent-a30: rgba(27, 18, 14, 0.3);
+  --ink-a30: rgba(245, 237, 230, 0.3);
+  --paused-dim: rgba(20, 16, 15, 0.72);
   color-scheme: dark;
 }
 
@@ -325,14 +327,18 @@ body {
 .guide {
   position: absolute;
   left: 50%;
-  bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(58px + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   transition: opacity 0.5s ease;
   max-width: min(90vw, 22rem);
+}
+
+.guide:has(.guide-text.is-off) {
+  gap: 10px;
 }
 
 .guide.is-gone {
@@ -341,21 +347,24 @@ body {
 
 .guide-text {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 13px;
   letter-spacing: 0.02em;
   text-align: center;
-  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.75);
+  color: var(--ink);
 }
 
 .guide-text.is-off {
   opacity: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
   transition: opacity 0.3s ease;
 }
 
 .guide-bars {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
 }
 
 .guide-bar-row {
@@ -365,11 +374,10 @@ body {
 }
 
 .guide-bar-row span {
-  width: 2.6em;
+  width: 26px;
   white-space: nowrap;
-  font-size: 0.68rem;
+  font-size: 11px;
   color: var(--muted);
-  letter-spacing: 0.06em;
   text-align: right;
 }
 
@@ -377,8 +385,8 @@ body {
   position: relative;
   width: 160px;
   height: 3px;
-  border-radius: 3px;
-  background: rgba(245, 237, 230, 0.18);
+  border-radius: 999px;
+  background: var(--line);
   overflow: hidden;
 }
 
@@ -401,14 +409,20 @@ body {
 .status {
   position: absolute;
   left: 50%;
-  top: calc(22px + env(safe-area-inset-top, 0px));
+  top: calc(104px + env(safe-area-inset-top, 0px));
   transform: translateX(-50%);
+  display: flex;
+  align-items: center;
   margin: 0;
-  padding: 7px 16px;
+  height: 34px;
+  padding: 0 14px;
   border-radius: 999px;
-  background: rgba(20, 16, 15, 0.6);
-  backdrop-filter: blur(8px);
-  font-size: 0.82rem;
+  background: var(--glass);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  font-size: 12px;
+  letter-spacing: 0.02em;
   color: var(--ink);
   white-space: nowrap;
 }
@@ -418,7 +432,7 @@ body {
 .topbar {
   position: absolute;
   right: calc(16px + env(safe-area-inset-right, 0px));
-  top: calc(16px + env(safe-area-inset-top, 0px));
+  top: calc(54px + env(safe-area-inset-top, 0px));
   display: flex;
   gap: 8px;
 }
@@ -426,10 +440,11 @@ body {
 .icon-btn {
   width: 40px;
   height: 40px;
-  border-radius: 50%;
+  border-radius: 999px;
   border: 1px solid var(--line);
-  background: rgba(20, 16, 15, 0.62);
-  backdrop-filter: blur(8px);
+  background: var(--glass);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   color: var(--ink);
   display: grid;
   place-items: center;
@@ -445,30 +460,32 @@ body {
   height: 18px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.8;
+  stroke-width: 1.5;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .icon-btn svg .knob {
-  fill: currentColor;
+  fill: var(--icon-knob);
   stroke: none;
 }
 
 .icon-btn:active {
-  transform: scale(0.93);
+  transform: scale(0.98);
+  background: var(--glass-press);
+  border-color: var(--glass-press-line);
 }
 
 /* 隐藏 UI 后只留这一个点，点它恢复。它必须比什么都没有多一点点，否则找不回来。 */
 .ui-dot {
   position: absolute;
   right: calc(24px + env(safe-area-inset-right, 0px));
-  top: calc(24px + env(safe-area-inset-top, 0px));
+  top: calc(62px + env(safe-area-inset-top, 0px));
   width: 24px;
   height: 24px;
-  border-radius: 50%;
+  border-radius: 999px;
   border: 0;
-  background: rgba(245, 237, 230, 0.3);
+  background: var(--ink-a30);
   cursor: pointer;
   padding: 0;
 }
@@ -488,15 +505,20 @@ body {
 .toast {
   position: absolute;
   left: 50%;
-  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(120px + env(safe-area-inset-bottom, 0px));
   transform: translate(-50%, 6px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
-  padding: 8px 16px;
+  height: 36px;
+  padding: 0 16px;
   border-radius: 999px;
-  background: rgba(20, 16, 15, 0.78);
+  background: var(--glass);
   border: 1px solid var(--line);
-  backdrop-filter: blur(8px);
-  font-size: 0.82rem;
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  font-size: 13px;
   color: var(--ink);
   white-space: nowrap;
   opacity: 0;
@@ -519,12 +541,13 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 10px;
-  padding: 24px;
+  padding: 0 24px calc(74px + env(safe-area-inset-bottom, 0px));
   border: 0;
-  background: rgba(20, 16, 15, 0.72);
-  backdrop-filter: blur(6px);
+  background: var(--paused-dim);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
   color: var(--ink);
   font: inherit;
   text-align: center;
@@ -534,12 +557,13 @@ body {
 }
 
 .paused-title {
-  font-size: 1.05rem;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
 }
 
 .paused-hint {
-  font-size: 0.88rem;
+  font-size: 13px;
   color: var(--muted);
 }
 
@@ -671,15 +695,16 @@ body {
 /* 截图分享：挨着手动圆钮左侧，略小一号，不挡画面中央 */
 .share {
   position: absolute;
-  right: calc(20px + 56px + 12px + env(safe-area-inset-right, 0px));
-  bottom: calc(24px + 8px + env(safe-area-inset-bottom, 0px));
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
   border: 1px solid var(--line);
-  background: rgba(20, 16, 15, 0.55);
-  backdrop-filter: blur(10px);
-  color: var(--muted);
+  background: var(--glass);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  color: var(--ink);
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -687,15 +712,17 @@ body {
 }
 
 .share:active {
-  transform: scale(0.93);
+  transform: scale(0.98);
+  background: var(--glass-press);
+  border-color: var(--glass-press-line);
 }
 
 .share svg {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.8;
+  stroke-width: 1.5;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -933,22 +960,9 @@ body {
   }
 }
 
-/* 手机窄屏：引导带上「跳过」按钮之后就变成了可点区域，
-   而右下角的手动圆钮 + 分享钮正好压在同一条带上，会把「跳过」吃掉。
-   所以在窄屏把引导整体抬到控件上方，提示条再往上让一层。 */
 @media (max-width: 640px) {
-  .guide {
-    bottom: calc(94px + env(safe-area-inset-bottom, 0px));
-  }
-
-  /* 窄屏上顶部居中的胶囊会和右上角三钮撞在一起，整体下移一行 */
-  .status,
   .banner {
     top: calc(68px + env(safe-area-inset-top, 0px));
-  }
-
-  .toast {
-    bottom: calc(164px + env(safe-area-inset-bottom, 0px));
   }
 }
 
