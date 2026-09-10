@@ -105,12 +105,25 @@ document.addEventListener('visibilitychange', () => {
   }
 })
 
-if (flags.debug) {
-  window.addEventListener('keydown', (e) => {
-    if (e.key === '1') state.forceRain(3)
-    if (e.key === '2') state.forceBurst()
-  })
-}
+// 键盘快捷键：D 随时开关调试面板（不用手动改 URL），1/2 手动触发
+window.addEventListener('keydown', (e) => {
+  if (e.target instanceof HTMLInputElement) return
+  const k = e.key.toLowerCase()
+  if (k === 'd') applyConfig({ ...cfg, showDebug: !cfg.showDebug })
+  if (k === '1') state.forceRain(3)
+  if (k === '2') state.forceBurst()
+})
+
+// 调试用的虚拟头：没有摄像头时，按住/移动指针即可当成一颗头，
+// 用来验证碰撞与分裂效果（Cursor 调试碰撞时也用这个，不必对着镜头）。
+const testHead = { cx: 0, cy: 0, rx: 95, ry: 125 }
+let testHeadOn = false
+window.addEventListener('pointermove', (e) => {
+  if (cameraOn || !cfg.showDebug) return
+  testHead.cx = e.clientX
+  testHead.cy = e.clientY
+  testHeadOn = true
+})
 
 function resize(): void {
   w = window.innerWidth
@@ -212,17 +225,15 @@ function loop(now: number): void {
   // 3. 状态机
   state.update(sig, dt)
 
-  // 4. 发射
+  // 4. 发射：烟花从画面底部升空，到高处再炸开，粒子受重力落到人身上
   if (state.burstPending) {
     state.burstPending = false
-    const bx = cameraOn && sig.faceOk ? sig.mouthX : w / 2
-    const by = cameraOn && sig.faceOk ? sig.mouthY : h * 0.55
-    effects.burst(bx, by, state.burstPower, state.burstScale)
+    effects.launch(state.burstPower, state.burstScale)
   }
   effects.setRainRate(state.rainRate)
 
   // 5. 物理 + 碰撞（每帧）
-  const head = cameraOn ? sig.head : null
+  const head = cameraOn ? sig.head : testHeadOn && cfg.showDebug ? testHead : null
   effects.update(dt, head)
 
   // 6. 绘制
@@ -241,24 +252,23 @@ function loop(now: number): void {
 function updateHud(sig: ReturnType<FaceTracker['sample']>, now: number): void {
   if (effects.stats.collisions > 0) state.reachedCollision = true
 
-  // 引导三步
-  if (cfg.showGuide && !flags.clean && !guideDone && cameraOn) {
-    if (!state.reachedSmile) {
-      hud.setGuide(copy.guide.step1, state.guideProgress, 'smile')
-    } else if (!state.reachedLaugh) {
-      hud.setGuide(copy.guide.step2, state.guideProgress, 'laugh')
-    } else if (!state.reachedCollision) {
-      hud.setGuide(copy.guide.step3, 1, 'none')
-    } else {
-      if (!guideDoneAt) guideDoneAt = now
-      hud.setGuide(copy.guide.done, 1, 'none')
-      if (now - guideDoneAt > 2000) {
-        guideDone = true
-        hud.setGuide(null, 0, 'none')
-      }
-    }
-  } else if (!guideDone && (!cfg.showGuide || flags.clean)) {
+  // 引导三步 → 走完只留进度条
+  // 进度条是「我离触发还差多少」的常驻反馈，不能跟着提示文字一起消失，
+  // 否则第二次开始用户就再也不知道自己笑得够不够。
+  if (!cfg.showGuide || flags.clean || !cameraOn) {
     hud.setGuide(null, 0, 'none')
+  } else if (guideDone) {
+    hud.setGuide('', state.guideProgress, state.guidePhase)
+  } else if (!state.reachedSmile) {
+    hud.setGuide(copy.guide.step1, state.guideProgress, 'smile')
+  } else if (!state.reachedLaugh) {
+    hud.setGuide(copy.guide.step2, state.guideProgress, 'laugh')
+  } else if (!state.reachedCollision) {
+    hud.setGuide(copy.guide.step3, state.guideProgress, state.guidePhase)
+  } else {
+    if (!guideDoneAt) guideDoneAt = now
+    hud.setGuide(copy.guide.done, state.guideProgress, state.guidePhase)
+    if (now - guideDoneAt > 2000) guideDone = true
   }
 
   // 状态提示
@@ -278,7 +288,7 @@ function updateHud(sig: ReturnType<FaceTracker['sample']>, now: number): void {
         `fps       ${(1000 / emaFrame).toFixed(0)}   frame ${emaFrame.toFixed(1)}ms`,
         `detect    ${face.lastDetectMs.toFixed(1)}ms (${face.delegate}, 每 ${DETECT_EVERY} 帧)`,
         `assets    ${face.assetSource}`,
-        `tier      ${tier.name}   rain ${s.rainAlive}   spark ${s.sparkAlive}`,
+        `tier      ${tier.name}   rain ${s.rainAlive}   spark ${s.sparkAlive}   rocket ${s.rocketAlive}`,
         `collide   ${s.collisions}/frame`,
       ].join('\n'),
     )
