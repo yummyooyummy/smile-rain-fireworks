@@ -3,6 +3,7 @@
 // 所有文案来自 copy.ts，不要在这里写死中文。
 
 import { copy } from './copy'
+import './drawer'
 
 export interface HudCallbacks {
   onStart: () => void
