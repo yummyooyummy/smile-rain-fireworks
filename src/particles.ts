@@ -44,7 +44,13 @@ const RAIN_REF_SIZE = 820
 const RAIN_LAYER_WEIGHT = [0.5, 0.32, 0.18] // 远层最多，近层最少
 
 const GRAVITY = 300 // px/s²（比真实重力慢，粒子才有时间飘落到人身上再碰撞）
-const SPARK_DRAG = 0.985 // 每 1/60 秒
+// 阻力改为与速度平方成正比（Norman 2018 对真实烟花星的拟合：v(t) = v0 / (1 + k·v0·t)）。
+// 直觉版本 v *= 0.985 是线性衰减，快慢粒子一样减速，看起来「匀速散开的彩点」；
+// 真实烟花前 0.5 s 扩得最猛、然后骤然变慢开始飘落——这正是 v² 阻力的形状。
+const SPARK_K = 0.01 // 1/px；v0≈900 px/s 时 k·v0≈9/s：0.5 s 内扩到约 170 px，2 s 约 290 px
+const TRAIL_N = 5 // 每颗火花记最近 5 个位置，画成渐隐的拖尾
+const TWINKLE_RATE = 0.35 // 35% 的爆炸粒子会闪烁
+const CRACKLE_RATE = 0.3 // 30% 的爆炸粒子在燃尽前二次崩裂
 const FLASH_MS = 50
 const PULSE_MS = 120
 const PULSE_COOLDOWN_MS = 200
@@ -136,6 +142,13 @@ export class Effects {
   private scolor!: Uint8Array
   private sflash!: Float32Array
   private sgen!: Uint8Array // 0 = 爆炸粒子（撞头会分裂）；1 = 分裂出来的碎片（不再分裂）
+  private stw!: Float32Array // 闪烁频率（Hz），0 = 不闪
+  private sph!: Float32Array // 闪烁相位
+  private scr!: Uint8Array // 1 = 还会二次崩裂
+  private shx!: Float32Array // 拖尾位置环：cap × TRAIL_N
+  private shy!: Float32Array
+  private shn!: Uint8Array // 环里已写入的点数（≤ TRAIL_N）
+  private shi!: Uint8Array // 环的写指针
   private sAlive!: Uint8Array
   private sparkCap = 0
   private sparkCursor = 0
@@ -289,6 +302,13 @@ export class Effects {
     this.scolor = new Uint8Array(cap)
     this.sflash = new Float32Array(cap)
     this.sgen = new Uint8Array(cap)
+    this.stw = new Float32Array(cap)
+    this.sph = new Float32Array(cap)
+    this.scr = new Uint8Array(cap)
+    this.shx = new Float32Array(cap * TRAIL_N)
+    this.shy = new Float32Array(cap * TRAIL_N)
+    this.shn = new Uint8Array(cap)
+    this.shi = new Uint8Array(cap)
     this.sAlive = new Uint8Array(cap)
     this.sparkAlive = 0
     this.sparkCursor = 0
@@ -410,7 +430,8 @@ export class Effects {
   burst(x: number, y: number, power: number, scale = 1): void {
     const base = Math.min(this.cfg.fireworkCount, this.tier.sparkPerBurst)
     const count = Math.max(12, Math.round(base * scale * (0.55 + 0.45 * power)))
-    const speed = (270 + 320 * power) * this.cfg.burstScale
+    // v² 阻力下初速要给足，前 0.3 s 的猛扩就是烟花的「炸」感
+    const speed = (430 + 510 * power) * this.cfg.burstScale
     const hue = (Math.random() * PALETTE.length) | 0
     this.addFlash(x, y, hue, 0.7 + 0.5 * power * scale)
     for (let i = 0; i < count; i++) {
@@ -432,6 +453,40 @@ export class Effects {
       this.scolor[idx] = Math.random() < 0.75 ? hue : (Math.random() * PALETTE.length) | 0
       this.sflash[idx] = 0
       this.sgen[idx] = 0
+      this.stw[idx] = Math.random() < TWINKLE_RATE ? 6 + Math.random() * 9 : 0
+      this.sph[idx] = Math.random() * 6.283
+      this.scr[idx] = Math.random() < CRACKLE_RATE ? 1 : 0
+      this.shn[idx] = 0
+      this.shi[idx] = 0
+    }
+  }
+
+  /** 二次崩裂：一颗星燃尽前再炸出几颗小星，烟花才「活」——不是均匀熄灭，而是层层迸发 */
+  private crackle(i: number): void {
+    const n = 3 + ((Math.random() * 3) | 0)
+    for (let k = 0; k < n; k++) {
+      const idx = this.acquireSpark()
+      if (idx < 0) break
+      const ang = Math.random() * 6.283
+      const sp = 40 + Math.random() * 90
+      this.sx[idx] = this.sx[i]
+      this.sy[idx] = this.sy[i]
+      this.spx[idx] = this.sx[i]
+      this.spy[idx] = this.sy[i]
+      this.svx[idx] = this.svx[i] * 0.4 + Math.cos(ang) * sp
+      this.svy[idx] = this.svy[i] * 0.4 + Math.sin(ang) * sp
+      const life = 0.25 + Math.random() * 0.35
+      this.slife[idx] = life
+      this.smax[idx] = life
+      this.ssize[idx] = this.ssize[i] * (0.3 + Math.random() * 0.25)
+      this.scolor[idx] = Math.random() < 0.6 ? this.scolor[i] : 2
+      this.sflash[idx] = FLASH_MS
+      this.sgen[idx] = 1
+      this.stw[idx] = 12 + Math.random() * 10
+      this.sph[idx] = Math.random() * 6.283
+      this.scr[idx] = 0
+      this.shn[idx] = 0
+      this.shi[idx] = 0
     }
   }
 
@@ -460,6 +515,11 @@ export class Effects {
       this.scolor[idx] = Math.random() < 0.5 ? parentColor : 2 // 掺一点奶白当火星
       this.sflash[idx] = FLASH_MS
       this.sgen[idx] = 1 // 碎片不再分裂，避免连锁
+      this.stw[idx] = 0
+      this.sph[idx] = 0
+      this.scr[idx] = 0
+      this.shn[idx] = 0
+      this.shi[idx] = 0
     }
   }
 
@@ -569,7 +629,6 @@ export class Effects {
     }
 
     // --- 火花：积分 + 碰撞 ---
-    const drag = Math.pow(SPARK_DRAG, dt * 60)
     const rest = this.cfg.restitution
     const sparkCap = this.sparkCap
     for (let i = 0; i < sparkCap; i++) {
@@ -584,12 +643,29 @@ export class Effects {
 
       this.spx[i] = this.sx[i]
       this.spy[i] = this.sy[i]
+      // 拖尾：把上一帧位置写进环
+      const hi = this.shi[i]
+      this.shx[i * TRAIL_N + hi] = this.sx[i]
+      this.shy[i * TRAIL_N + hi] = this.sy[i]
+      this.shi[i] = (hi + 1) % TRAIL_N
+      if (this.shn[i] < TRAIL_N) this.shn[i]++
 
+      // v² 阻力：ds = -k·s²·dt → s' = s / (1 + k·s·dt)，快的减得狠、慢的几乎不减
+      const spd = Math.hypot(this.svx[i], this.svy[i])
+      if (spd > 1) {
+        const f = 1 / (1 + SPARK_K * spd * dt)
+        this.svx[i] *= f
+        this.svy[i] *= f
+      }
       this.svy[i] += GRAVITY * dt
-      this.svx[i] *= drag
-      this.svy[i] *= drag
       this.sx[i] += this.svx[i] * dt
       this.sy[i] += this.svy[i] * dt
+
+      // 燃尽前 30% 时二次崩裂一次
+      if (this.scr[i] && this.slife[i] < this.smax[i] * 0.3) {
+        this.scr[i] = 0
+        this.crackle(i)
+      }
 
       if (this.sx[i] < -80 || this.sx[i] > this.w + 80 || this.sy[i] > bottom) {
         this.sAlive[i] = 0
@@ -736,25 +812,49 @@ export class Effects {
     }
 
     // 火花
+    const now = performance.now() * 0.001
     for (let i = 0; i < this.sparkCap; i++) {
       if (!this.sAlive[i]) continue
       const t = this.slife[i] / this.smax[i]
-      const alpha = t * Math.sqrt(t) // 比 t² 衰减慢，火花亮得久一点
+      let alpha = t * Math.sqrt(t) // 比 t² 衰减慢，火花亮得久一点
+      // 闪烁：亮度在 0.45–1 之间按各自频率与相位起伏，避免同步闪
+      if (this.stw[i] > 0) alpha *= 0.72 + 0.28 * Math.sin(now * this.stw[i] * 6.283 + this.sph[i])
       const size = this.ssize[i] * (0.5 + 0.5 * t) * 3.2
       const half = size / 2
-      const img = this.sflash[i] > 0 ? glow[whiteIdx] : glow[this.scolor[i]]
+      const c = this.scolor[i]
+      const img = this.sflash[i] > 0 ? glow[whiteIdx] : glow[c]
+
+      // 拖尾：从环里最老的点画到当前位置，段越老越淡越细
+      const n = this.shn[i]
+      if (n >= 2) {
+        ctx.strokeStyle = this.paletteStroke[c]
+        ctx.lineCap = 'round'
+        const base = i * TRAIL_N
+        let idx = (this.shi[i] - n + TRAIL_N) % TRAIL_N
+        let px = this.shx[base + idx]
+        let py = this.shy[base + idx]
+        for (let k = 1; k <= n; k++) {
+          const nx2 = k === n ? this.sx[i] : this.shx[base + ((idx + 1) % TRAIL_N)]
+          const ny2 = k === n ? this.sy[i] : this.shy[base + ((idx + 1) % TRAIL_N)]
+          const w = k / n
+          ctx.globalAlpha = alpha * 0.55 * w
+          ctx.lineWidth = Math.max(0.8, this.ssize[i] * 0.4 * t * w)
+          ctx.beginPath()
+          ctx.moveTo(px, py)
+          ctx.lineTo(nx2, ny2)
+          ctx.stroke()
+          px = nx2
+          py = ny2
+          idx = (idx + 1) % TRAIL_N
+        }
+      }
+
       ctx.globalAlpha = alpha
       ctx.drawImage(img, this.sx[i] - half, this.sy[i] - half, size, size)
-      const dx = this.sx[i] - this.spx[i]
-      const dy = this.sy[i] - this.spy[i]
-      if (dx * dx + dy * dy > 4) {
-        ctx.globalAlpha = alpha * 0.5
-        ctx.beginPath()
-        ctx.strokeStyle = this.paletteStroke[this.scolor[i]]
-        ctx.lineWidth = Math.max(1, this.ssize[i] * 0.35 * t)
-        ctx.moveTo(this.spx[i] - dx * 1.5, this.spy[i] - dy * 1.5)
-        ctx.lineTo(this.sx[i], this.sy[i])
-        ctx.stroke()
+      // 余晖：刚炸开的 15% 时间里核心偏白（高温），之后回到本色，再随 alpha 暗下去
+      if (t > 0.85 && this.sflash[i] <= 0) {
+        ctx.globalAlpha = alpha * ((t - 0.85) / 0.15) * 0.8
+        ctx.drawImage(glow[whiteIdx], this.sx[i] - half * 0.6, this.sy[i] - half * 0.6, size * 0.6, size * 0.6)
       }
     }
     ctx.globalAlpha = 1
