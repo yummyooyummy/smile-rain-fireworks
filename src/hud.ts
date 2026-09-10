@@ -88,8 +88,9 @@ export class Hud {
           <p class="start-note" id="startNote" hidden></p>
           <p class="start-steps" id="startSteps" hidden></p>
           <button type="button" class="start-link" id="startRetry" hidden>${copy.start.retryCamera}</button>
-          <p class="start-privacy">${copy.start.liveDemo}</p>
         </div>
+        <p class="start-cam"><span class="start-cam-dot" aria-hidden="true"></span>${copy.start.needCamera}</p>
+        <p class="start-privacy">${copy.start.liveDemo}</p>
       </div>
 
       <div class="topbar" id="topbar" hidden>

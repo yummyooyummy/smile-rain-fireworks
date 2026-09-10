@@ -4,8 +4,9 @@
 export const copy = {
   start: {
     title: '笑一下，屏幕会开花',
-    subtitle: '微笑会下雨，大笑会放烟花。需要打开摄像头。',
+    subtitle: '微笑会下雨，大笑会放烟花。',
     button: '开始',
+    needCamera: '需要打开摄像头',
     liveDemo: 'Live Demo · 画面只在本机处理，不会上传',
     // 按钮自己变状态，没有独立错误页——用户永远停在这一页
     stageCamera: '正在打开摄像头',

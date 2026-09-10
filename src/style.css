@@ -10,6 +10,19 @@
   --gold: #e9b95a;
   --rain: #bfd4f2;
   --shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  --ink-on-accent: #1b120e;
+  --glass: rgba(20, 16, 15, 0.6);
+  --glass-blur: 9px;
+  --glass-press: rgba(245, 237, 230, 0.1);
+  --glass-press-line: rgba(245, 237, 230, 0.24);
+  --accent-soft: rgba(240, 120, 90, 0.12);
+  --accent-tint: rgba(240, 120, 90, 0.16);
+  --accent-line: rgba(240, 120, 90, 0.55);
+  --icon-knob: #191311;
+  --grad-primary: linear-gradient(135deg, var(--accent) 0%, var(--gold) 100%);
+  --grad-slider: linear-gradient(90deg, var(--accent), var(--gold));
+  --gold-soft: rgba(233, 185, 90, 0.1);
+  --ink-on-accent-a30: rgba(27, 18, 14, 0.3);
   color-scheme: dark;
 }
 
@@ -81,10 +94,10 @@ body {
   inset: 0;
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding: 0 44px;
   background:
-    radial-gradient(120% 90% at 50% 0%, rgba(240, 120, 90, 0.16), transparent 60%),
-    radial-gradient(90% 70% at 50% 110%, rgba(233, 185, 90, 0.1), transparent 60%),
+    radial-gradient(120% 90% at 50% 0%, var(--accent-tint), transparent 60%),
+    radial-gradient(90% 70% at 50% 110%, var(--gold-soft), transparent 60%),
     var(--ground);
   pointer-events: auto;
   transition:
@@ -99,54 +112,68 @@ body {
 }
 
 .start-inner {
-  max-width: 30rem;
+  width: 100%;
+  max-width: 302px;
   text-align: center;
   display: flex;
   flex-direction: column;
-  gap: 18px;
   align-items: center;
 }
 
 .start-title {
   margin: 0;
-  font-size: clamp(1.9rem, 7vw, 2.7rem);
-  font-weight: 700;
+  font-size: 30px;
+  font-weight: 600;
   letter-spacing: 0.02em;
   text-wrap: balance;
-  line-height: 1.25;
+  line-height: 1.35;
+}
+
+.start-inner:has(#previewWrap:not([hidden])) .start-title {
+  margin-top: 26px;
+  font-size: 28px;
 }
 
 .start-sub {
-  margin: 0;
+  margin: 14px 0 0;
   color: var(--muted);
-  font-size: 0.95rem;
-  line-height: 1.75;
-  max-width: 26rem;
+  font-size: 14px;
+  line-height: 1.8;
+  max-width: 276px;
+}
+
+.start-inner:has(#previewWrap:not([hidden])) .start-sub {
+  margin-top: 12px;
 }
 
 .start-btn {
   position: relative;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
+  width: 100%;
+  height: 52px;
+  margin-top: 34px;
+  letter-spacing: 0.04em;
+}
+
+.start-inner:has(#previewWrap:not([hidden])) .start-btn {
+  margin-top: 26px;
 }
 
 .start-btn .spinner {
   display: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid rgba(20, 16, 15, 0.35);
-  border-top-color: var(--ground);
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid var(--ink-on-accent-a30);
+  border-top-color: var(--ink-on-accent);
   animation: spin 0.8s linear infinite;
 }
 
 .start-btn.is-busy .spinner {
   display: block;
-}
-
-.start-btn.is-busy {
-  opacity: 0.85;
 }
 
 @keyframes spin {
@@ -157,76 +184,111 @@ body {
 
 /* 加载模型那一行：只有文字没有条。转圈说「在忙」，数字说「没卡死」。 */
 .start-note {
-  margin: -6px 0 0;
-  font-size: 0.78rem;
+  margin: 14px 0 0;
+  font-size: 12px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
 .start-steps {
-  margin: 0;
-  padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: rgba(245, 237, 230, 0.06);
-  font-size: 0.85rem;
-  line-height: 1.7;
-  color: var(--ink);
+  margin: 18px 0 0;
+  max-width: 300px;
+  font-size: 12px;
+  line-height: 1.9;
+  color: var(--muted);
 }
 
 .start-link {
   border: 0;
   background: none;
-  padding: 4px 8px;
-  color: var(--gold);
+  margin-top: 10px;
+  padding: 0;
+  color: var(--accent);
   font: inherit;
-  font-size: 0.85rem;
+  font-size: 13px;
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: 4px;
   cursor: pointer;
 }
 
-.start-privacy {
+.start-cam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   margin: 0;
-  color: rgba(164, 148, 138, 0.7);
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.start-cam-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--gold);
+  flex: none;
+}
+
+.start-privacy {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(46px + env(safe-area-inset-bottom, 0px));
+  margin: 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.02em;
 }
 
 .btn-primary,
 .btn-ghost {
   border: 0;
   border-radius: 999px;
-  padding: 13px 42px;
-  font-size: 1rem;
+  padding: 0 24px;
+  height: 52px;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   transition:
     transform 0.15s ease,
     opacity 0.2s ease,
-    background 0.2s ease;
+    background 0.2s ease,
+    filter 0.15s ease;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent), var(--gold));
-  color: #2a1206;
-  box-shadow: var(--shadow);
+  background: var(--grad-primary);
+  color: var(--ink-on-accent);
 }
 
 .btn-ghost {
   background: transparent;
   color: var(--ink);
   border: 1px solid var(--line);
+  font-size: 15px;
 }
 
-.btn-primary:active,
+.btn-primary:active {
+  transform: scale(0.98);
+  filter: brightness(0.86);
+}
+
 .btn-ghost:active {
-  transform: scale(0.97);
+  transform: scale(0.98);
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
 }
 
 .btn-primary:disabled {
-  opacity: 0.65;
+  opacity: 0.55;
   cursor: default;
+  filter: none;
 }
 
 .btn-primary:focus-visible,
@@ -243,14 +305,12 @@ body {
 
 /* 视频没录出来之前这个槽位是 hidden 的，不占位、不留黑框。 */
 .preview {
-  width: min(100%, 22rem);
-  aspect-ratio: 9 / 16;
-  max-height: 34vh;
+  width: 161px;
+  height: 287px;
   border-radius: 18px;
   overflow: hidden;
   border: 1px solid var(--line);
-  background: rgba(0, 0, 0, 0.35);
-  box-shadow: var(--shadow);
+  background: var(--ground-2);
 }
 
 .preview video {
