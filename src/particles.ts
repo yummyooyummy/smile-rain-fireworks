@@ -386,9 +386,10 @@ export class Effects {
       // 整个背景均匀升空（Yuqing 决定，不再只在脸两侧）；炸点高度仍参照头：
       // 落在头顶上方 0.6–1.8 倍头高处，粒子飘落时才会经过头部。
       x = this.w * (0.1 + Math.random() * 0.8)
-      targetY = Math.max(this.h * 0.08, head.cy - head.ry * (0.6 + Math.random() * 1.2))
-      // 正对着头的那一列，炸点必须高过头顶——不然就在脸前面炸
-      if (Math.abs(x - head.cx) < head.rx * 1.4) targetY = Math.min(targetY, head.cy - head.ry * 1.7)
+      // 炸点离头远一点：太近的话炸开瞬间整片粒子一起砸在头上，碰撞密得像下冰雹。
+      // 远了之后只有飘落的那部分会经过头，稀疏、可辨认。
+      targetY = Math.max(this.h * 0.06, head.cy - head.ry * (1.6 + Math.random() * 1.6))
+      if (Math.abs(x - head.cx) < head.rx * 1.6) targetY = Math.min(targetY, head.cy - head.ry * 3.2)
     } else {
       x = this.w * (0.12 + Math.random() * 0.76)
       targetY = this.h * (0.12 + Math.random() * 0.26) * (scale < 0.6 ? 1.5 : 1)
@@ -496,39 +497,6 @@ export class Effects {
       this.sgen[idx] = 1
       this.stw[idx] = 12 + Math.random() * 10
       this.sph[idx] = Math.random() * 6.283
-      this.scr[idx] = 0
-    }
-  }
-
-  /** 烟花粒子撞到头：分裂成更小的粒子向四周溅开 */
-  private shatter(i: number, nx: number, ny: number): void {
-    const parentColor = this.scolor[i]
-    const parentSize = this.ssize[i]
-    const speed = Math.hypot(this.svx[i], this.svy[i])
-    // 撞到人身上是「擦过皮肤溅出一两点火星」，不是再炸一次——
-    // 烟花层现在有余辉，每颗碎片都会留光迹，3–5 颗就成了一朵小烟花，太抢戏。
-    const n = 1 + ((Math.random() * 2) | 0)
-    for (let k = 0; k < n; k++) {
-      const idx = this.acquireSpark()
-      if (idx < 0) break
-      // 以碰撞法线为中心，向四周散开
-      const ang = Math.atan2(ny, nx) + (Math.random() - 0.5) * 2.0
-      const sp = (40 + speed * 0.25) * (0.5 + Math.random() * 0.7)
-      this.sx[idx] = this.sx[i]
-      this.sy[idx] = this.sy[i]
-      this.spx[idx] = this.sx[i]
-      this.spy[idx] = this.sy[i]
-      this.svx[idx] = Math.cos(ang) * sp
-      this.svy[idx] = Math.sin(ang) * sp
-      const life = 0.22 + Math.random() * 0.25
-      this.slife[idx] = life
-      this.smax[idx] = life
-      this.ssize[idx] = parentSize * (0.3 + Math.random() * 0.15)
-      this.scolor[idx] = Math.random() < 0.5 ? parentColor : 2 // 掺一点奶白当火星
-      this.sflash[idx] = FLASH_MS
-      this.sgen[idx] = 1 // 碎片不再分裂，避免连锁
-      this.stw[idx] = 0
-      this.sph[idx] = 0
       this.scr[idx] = 0
     }
   }
@@ -736,23 +704,19 @@ export class Effects {
       this.headPulse = PULSE_MS
       this.headPulseCooldown = PULSE_COOLDOWN_MS
     }
-    if (this.sgen[i] === 0 && Math.random() < 0.6) {
-      this.shatter(i, nx, ny)
-      this.sAlive[i] = 0
-      this.sparkAlive--
-    } else {
-      // 另外四成撞击：母粒子本身弹开、闪一下白、变小、之后当碎片处理（不再分裂）
+    // 撞人 = 弹开 + 闪白 + 缩小，不分裂（分裂版本在余辉层上太抢戏，Yuqing 试过后定的）
+    if (this.sgen[i] === 0) {
       this.sgen[i] = 1
       this.ssize[i] *= 0.7
-      const vn = this.svx[i] * nx + this.svy[i] * ny
-      if (vn < 0) {
-        this.svx[i] -= (1 + rest) * vn * nx
-        this.svy[i] -= (1 + rest) * vn * ny
-        this.svx[i] *= 0.8
-        this.svy[i] *= 0.8
-      }
-      this.sflash[i] = FLASH_MS
     }
+    const vn = this.svx[i] * nx + this.svy[i] * ny
+    if (vn < 0) {
+      this.svx[i] -= (1 + rest) * vn * nx
+      this.svy[i] -= (1 + rest) * vn * ny
+      this.svx[i] *= 0.8
+      this.svy[i] *= 0.8
+    }
+    this.sflash[i] = FLASH_MS
   }
 
   // ---------- 绘制 ----------
