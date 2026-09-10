@@ -873,12 +873,6 @@ body {
   margin-top: 24px;
 }
 
-.drawer-replay {
-  align-self: stretch;
-  height: 44px;
-  font-size: 14px;
-}
-
 .drawer-head {
   display: flex;
   align-items: center;
