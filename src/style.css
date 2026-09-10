@@ -324,7 +324,7 @@ body {
   background: var(--ground-2);
 }
 
-.preview video {
+.preview img {
   width: 100%;
   height: 100%;
   object-fit: cover;

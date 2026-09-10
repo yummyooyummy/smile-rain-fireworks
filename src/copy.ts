@@ -15,7 +15,7 @@ export const copy = {
     stageWarmup: '正在启动识别',
     noCamera: '摄像头未开启，直接开始',
     retryCamera: '重试摄像头',
-    previewAlt: '玩法预览',
+    previewAlt: '玩法封面',
   },
   guide: {
     step1: '对着镜头微笑，雨就会落下来',

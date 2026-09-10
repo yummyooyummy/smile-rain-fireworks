@@ -77,7 +77,7 @@ export class Hud {
       <div class="start" id="startPage">
         <div class="start-inner">
           <div class="preview" id="previewWrap" hidden>
-            <video id="previewVid" autoplay muted loop playsinline aria-label="${copy.start.previewAlt}"></video>
+            <img id="previewImg" alt="${copy.start.previewAlt}" />
           </div>
           <div class="start-copy">
           <h1 class="start-title">${copy.start.title}</h1>
@@ -261,12 +261,12 @@ export class Hud {
     b.addEventListener('pointerleave', stop)
   }
 
+  /** 开始页封面图：文件不存在就整块消失，不留碎图标、不占布局。 */
   private bindPreview(): void {
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
-    const vid = this.previewWrap.querySelector('video') as HTMLVideoElement
-    vid.addEventListener('canplay', () => (this.previewWrap.hidden = false))
-    vid.addEventListener('error', () => (this.previewWrap.hidden = true))
-    vid.src = 'preview.mp4'
+    const img = this.previewWrap.querySelector('img') as HTMLImageElement
+    img.addEventListener('load', () => (this.previewWrap.hidden = false))
+    img.addEventListener('error', () => (this.previewWrap.hidden = true))
+    img.src = 'preview.png'
   }
 
   // ---------- 开始页 ----------
