@@ -73,19 +73,23 @@ let h = 0
 let guideDone = false
 let guideDoneAt = 0
 
-const hud = new Hud(hudRoot, {
-  onStart: () => void connect(true),
-  onFallback: () => {
-    hud.hideStart()
-    enterManualMode()
+const hud = new Hud(
+  hudRoot,
+  {
+    onStart: () => void connect(true),
+    onFallback: () => {
+      hud.hideStart()
+      enterManualMode()
+    },
+    onReconnect: () => void connect(!inScene),
+    onExit: () => exitToStart(),
+    onManualTap: () => state.forceRain(3),
+    onManualHold: () => state.forceBurst(),
+    onGear: (advanced) => window.dispatchEvent(new CustomEvent('open-drawer', { detail: { advanced } })),
+    onResume: () => resumeFromIdle(),
   },
-  onReconnect: () => void connect(!inScene),
-  onExit: () => exitToStart(),
-  onManualTap: () => state.forceRain(3),
-  onManualHold: () => state.forceBurst(),
-  onGear: (advanced) => window.dispatchEvent(new CustomEvent('open-drawer', { detail: { advanced } })),
-  onResume: () => resumeFromIdle(),
-})
+  person,
+)
 
 // 抽屉里的「重看新手引导」
 window.addEventListener('replay-guide', () => {

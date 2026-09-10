@@ -4,6 +4,7 @@
 
 import { copy } from './copy'
 import './drawer'
+import type { PersonMask } from './segment'
 
 export interface HudCallbacks {
   onStart: () => void
@@ -33,6 +34,8 @@ export class Hud {
   private cb: HudCallbacks
   private video: HTMLVideoElement
   private fx: HTMLCanvasElement
+  private rain: HTMLCanvasElement
+  private person: PersonMask
 
   private startPage!: HTMLElement
   private startBtn!: HTMLButtonElement
@@ -66,11 +69,13 @@ export class Hud {
   private guideHideTimer = 0
   private uiHidden = false
 
-  constructor(root: HTMLElement, cb: HudCallbacks) {
+  constructor(root: HTMLElement, cb: HudCallbacks, person: PersonMask) {
     this.root = root
     this.cb = cb
+    this.person = person
     this.video = document.getElementById('cam') as HTMLVideoElement
     this.fx = document.getElementById('fx') as HTMLCanvasElement
+    this.rain = document.getElementById('rain') as HTMLCanvasElement
     this.build()
   }
 
@@ -401,6 +406,10 @@ export class Hud {
       const sh = h / scale
       ctx.drawImage(this.video, (vw - sw) / 2, (vh - sh) / 2, sw, sh, 0, 0, w, h)
       ctx.restore()
+    }
+    if (this.person.active) {
+      if (this.rain.width && this.rain.height) ctx.drawImage(this.rain, 0, 0)
+      this.person.drawCutout(ctx, this.video, w, h)
     }
     ctx.drawImage(this.fx, 0, 0)
     return off

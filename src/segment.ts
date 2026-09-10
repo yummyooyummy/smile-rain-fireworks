@@ -234,7 +234,35 @@ export class PersonMask implements PersonCollider {
     out[1] = ny / l
   }
 
-  /** 调试：把遮罩按 cover + 镜像画到画布上（青色半透明），零像素运算，一次 drawImage。 */
+  /** 分享截图：在离屏画布上先画镜像视频，再用 destination-in 叠 cover 几何的人像遮罩。 */
+  drawCutout(ctx: CanvasRenderingContext2D, video: HTMLVideoElement, w: number, h: number): void {
+    if (!this.data) return
+    const vw = video.videoWidth
+    const vh = video.videoHeight
+    if (vw <= 0 || vh <= 0) return
+    const off = document.createElement('canvas')
+    off.width = w
+    off.height = h
+    const octx = off.getContext('2d')
+    if (!octx) return
+    octx.save()
+    octx.translate(w, 0)
+    octx.scale(-1, 1)
+    const scale = Math.max(w / vw, h / vh)
+    const sw = w / scale
+    const sh = h / scale
+    octx.drawImage(video, (vw - sw) / 2, (vh - sh) / 2, sw, sh, 0, 0, w, h)
+    octx.restore()
+    octx.globalCompositeOperation = 'destination-in'
+    const m = coverMap(vw, vh, w, h, { scale: 1, offX: 0, offY: 0 })
+    octx.save()
+    octx.translate(w, 0)
+    octx.scale(-1, 1)
+    octx.drawImage(this.maskCanvas, m.offX, m.offY, vw * m.scale, vh * m.scale)
+    octx.restore()
+    ctx.drawImage(off, 0, 0)
+  }
+
   drawDebug(ctx: CanvasRenderingContext2D, w: number): void {
     if (!this.data) return
     const m = this.map
