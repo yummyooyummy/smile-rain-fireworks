@@ -48,49 +48,80 @@ GPT-5.6 Sol 是 Medium 档，这种活儿不太够。
 
 ---
 
-## Prompt 1 · 建 GitHub 仓库并推送
+## Prompt 1 · 推到 GitHub（**不要装 Homebrew**）
+
+Cursor 可能会建议你装 Homebrew 再装 `gh` CLI。**别装。** 那是为了一条命令去装一整套包管理器，
+要输密码、要编译、要十几分钟，而这件事根本不需要命令行。
+
+### 推荐做法：GitHub Desktop（图形界面，五分钟）
+
+1. 打开 <https://desktop.github.com>，下载安装 GitHub Desktop。
+2. 打开它，用 GitHub 账号登录——它会自动弹浏览器完成授权，**不需要生成 token、不需要记密码**。
+3. 菜单 `File → Add Local Repository`，选 `~/笑雨烟花`。
+   它会自动识别出已有的 17 个 commit（不要选 "create a repository"）。
+4. 点右上角 `Publish repository`。
+   仓库名填 `smile-rain-fireworks`，**把 "Keep this code private" 的勾去掉**（题目要求 Public）。
+5. 点 Publish，完成。仓库地址在 `Repository → View on GitHub` 里。
+
+之后每次改完代码，在 GitHub Desktop 里写一句说明、点 Commit、点 Push 就行，不用碰终端。
+
+### 备选：如果你更想用终端
+
+先在浏览器建空仓库：github.com 右上角 `+` → `New repository` →
+名字 `smile-rain-fireworks` → 选 **Public** → **不要**勾选任何 "Initialize with..." → Create。
+
+然后把下面这段发给 Cursor（把 `<你的用户名>` 换掉）：
 
 ```
-本地 ~/笑雨烟花 已经是一个 git 仓库，15 个 commit，工作区干净。
-请帮我把它推到 GitHub 上一个新的 Public 仓库，仓库名 smile-rain-fireworks。
+在 ~/笑雨烟花 执行：
+git remote add origin https://github.com/<你的用户名>/smile-rain-fireworks.git
+git push -u origin main
 
-要求：
-1. 先检查我本机有没有装 gh CLI 且已登录（gh auth status）。没装就告诉我怎么装，不要自己乱试。
-2. 用 gh repo create 建 Public 仓库并推送 main 分支。
-3. 仓库 description 填：浏览器端 AR 表情互动原型 —— 微笑下雨，大笑放烟花，粒子与头部物理碰撞
-4. 完成后把仓库地址给我。
-
-不要改动任何源码，不要新建分支，不要动 .gitignore。
+如果 push 要求输入密码，告诉我，不要自己尝试其它方式。
+GitHub 已经不接受账号密码了，需要 Personal Access Token 或改用 GitHub Desktop。
+不要建议我安装 Homebrew 或 gh CLI——这件事不需要它们。
 ```
 
-如果她没装 `gh`，备用方案是手动：去 github.com 建一个空的 Public 仓库（不要勾 README），
-然后让 Cursor 执行 `git remote add origin <地址> && git push -u origin main`。
+（如果真的卡在密码上，就退回上面的 GitHub Desktop 方案，五分钟解决。）
 
 ---
 
-## Prompt 2 · 部署到 Vercel
+## Prompt 2 · 部署到 Vercel（**也不需要命令行**）
+
+1. 打开 <https://vercel.com>，用 **Continue with GitHub** 登录。
+2. `Add New...` → `Project` → 找到 `smile-rain-fireworks` → `Import`。
+3. 配置页面基本不用改，确认这几项：
+   - Framework Preset：**Vite**
+   - Build Command：`npm run build`
+   - Output Directory：`dist`
+   - Install Command：`npm install`
+4. 点 `Deploy`，等一两分钟。
+
+### 部署完必须做的一步验证
+
+在浏览器地址栏依次打开这两个地址（把 `<域名>` 换成 Vercel 给你的地址）：
 
 ```
-把这个项目部署到 Vercel。
-
-要求：
-1. 检查有没有装 vercel CLI 并登录。没有就告诉我怎么装。
-2. 用 vercel --prod 部署。框架是 Vite，构建命令 npm run build，输出目录 dist。
-3. 部署前确认：构建流程会自动跑 npm run prepare:assets（package.json 里的 prebuild），
-   它会把 wasm 复制到 public/wasm、把模型下载到 public/models。
-4. 部署完成后，用命令行验证这两个地址返回 200：
-   <部署域名>/wasm/vision_wasm_internal.js
-   <部署域名>/models/face_landmarker.task
-   这一步很重要——如果模型是 404，国内网络下打开 Demo 会直接白屏。
-5. 把线上地址给我。
-
-不要改源码。如果模型 404，先告诉我，不要自己想别的办法绕过去。
+https://<域名>/models/face_landmarker.task     ← 应该开始下载一个 4MB 左右的文件
+https://<域名>/wasm/vision_wasm_internal.js    ← 应该显示一大段 JS 代码
 ```
 
-**为什么第 4 步重要**：模型文件来自 Google 的服务器，国内直连不通。
-Vercel 的构建机在美国能下载成功，所以线上是自托管的、评审能打开。
-但如果那一步失败了，线上就会回退到 Google 的地址，国内评审看到的就是白屏。
-所以一定要验证。
+**两个都不能是 404。** 模型文件来自 Google 的服务器，国内直连不通；
+Vercel 的构建机在美国，构建时会自动下载成功，所以线上是自托管的、评审能打开。
+但万一那一步失败了，线上就会回退到 Google 的地址——国内评审看到的就是白屏，
+而你在有梯子的环境下测试完全正常，根本发现不了。
+
+如果 `models/face_landmarker.task` 是 404，把下面这段发给 Cursor：
+
+```
+Vercel 部署后 /models/face_landmarker.task 返回 404，说明构建时
+scripts/prepare-assets.mjs 没有成功下载模型。
+
+请查 Vercel 的构建日志，找到 [assets] 开头的那几行，告诉我它报了什么错。
+不要自己改代码绕过去，先告诉我原因。
+```
+
+最后用手机打开线上地址实测一遍——**这是唯一能证明移动端能跑的方式**，本地 localhost 手机访问不到。
 
 ---
 
