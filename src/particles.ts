@@ -437,7 +437,10 @@ export class Effects {
       const idx = this.acquireSpark()
       if (idx < 0) break
       const ang = Math.random() * Math.PI * 2
-      const sp = speed * (0.35 + Math.random() * 0.65)
+      // 真实烟花是一个球壳投影到平面上：外圈密、中心稀。取 u ∈ [-1,1] 均匀，
+      // 速度 = speed·sqrt(1-u²) 就是球壳的投影分布；再掺 25% 填满内部，避免中间空。
+      const u = Math.random() * 2 - 1
+      const sp = Math.random() < 0.75 ? speed * Math.sqrt(1 - u * u) : speed * (0.15 + Math.random() * 0.5)
       this.sx[idx] = x
       this.sy[idx] = y
       this.spx[idx] = x
@@ -447,7 +450,8 @@ export class Effects {
       const life = 1.4 + Math.random() * 1.2
       this.slife[idx] = life
       this.smax[idx] = life
-      this.ssize[idx] = 9 + Math.random() * 11 * (0.6 + power * 0.4)
+      // 参考视频里的烟花是几百颗细小的亮点，不是几十颗大光球
+      this.ssize[idx] = 3.5 + Math.random() * 4.5 * (0.6 + power * 0.4)
       // 一发烟花以一个主色为主，掺少量其它色，比纯随机好看
       this.scolor[idx] = Math.random() < 0.75 ? hue : (Math.random() * PALETTE.length) | 0
       this.sflash[idx] = 0
@@ -845,34 +849,27 @@ export class Effects {
       let alpha = t * Math.sqrt(t) // 比 t² 衰减慢，火花亮得久一点
       // 闪烁：亮度在 0.45–1 之间按各自频率与相位起伏，避免同步闪
       if (this.stw[i] > 0) alpha *= 0.72 + 0.28 * Math.sin(now * this.stw[i] * 6.283 + this.sph[i])
-      const size = this.ssize[i] * (0.5 + 0.5 * t) * 3.2
+      const size = this.ssize[i] * (0.5 + 0.5 * t) * 2.6
       const half = size / 2
       const c = this.scolor[i]
       const img = this.sflash[i] > 0 ? glow[whiteIdx] : glow[c]
 
-      // 拖尾：从环里最老的点画到当前位置，段越老越淡越细
+      // 拖尾：环里最老的点 → 当前位置，一条折线一次 stroke（460 颗 × 9 段逐段画会把手机拖垮）
       const n = this.shn[i]
       if (n >= 2) {
-        ctx.strokeStyle = this.paletteStroke[c]
-        ctx.lineCap = 'round'
         const base = i * TRAIL_N
         let idx = (this.shi[i] - n + TRAIL_N) % TRAIL_N
-        let px = this.shx[base + idx]
-        let py = this.shy[base + idx]
-        for (let k = 1; k <= n; k++) {
-          const nx2 = k === n ? this.sx[i] : this.shx[base + ((idx + 1) % TRAIL_N)]
-          const ny2 = k === n ? this.sy[i] : this.shy[base + ((idx + 1) % TRAIL_N)]
-          const w = k / n
-          ctx.globalAlpha = alpha * 0.65 * w
-          ctx.lineWidth = Math.max(0.8, this.ssize[i] * 0.4 * t * w)
-          ctx.beginPath()
-          ctx.moveTo(px, py)
-          ctx.lineTo(nx2, ny2)
-          ctx.stroke()
-          px = nx2
-          py = ny2
+        ctx.globalAlpha = alpha * 0.4
+        ctx.lineWidth = Math.max(0.7, this.ssize[i] * 0.3 * t)
+        ctx.strokeStyle = this.paletteStroke[c]
+        ctx.beginPath()
+        ctx.moveTo(this.shx[base + idx], this.shy[base + idx])
+        for (let k = 1; k < n; k++) {
           idx = (idx + 1) % TRAIL_N
+          ctx.lineTo(this.shx[base + idx], this.shy[base + idx])
         }
+        ctx.lineTo(this.sx[i], this.sy[i])
+        ctx.stroke()
       }
 
       ctx.globalAlpha = alpha

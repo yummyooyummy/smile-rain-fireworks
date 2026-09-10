@@ -138,7 +138,7 @@ export class ExpressionState {
           // 直接大笑也要能放烟花：不强迫用户先经过「微笑 300 ms」这一站。
           // 早期版本必须 Idle → Smiling → Laughing 串行走，用户一上来就大笑，
           // 会在 Smiling 的 300 ms 保持期里等一下，感觉「反应不过来」。
-          const laughingNow = sig.smile >= c.laughSmile && sig.jawOpen >= c.laughJaw
+          const laughingNow = this.isLaughing(sig)
           this.tLaughEnter = laughingNow ? this.tLaughEnter + ms : 0
           if (this.tLaughEnter >= HOLD_LAUGH_ENTER) {
             this.reachedSmile = true
@@ -174,7 +174,7 @@ export class ExpressionState {
             this.tSmileExit = 0
             break
           }
-          const laughing = sig.smile >= c.laughSmile && sig.jawOpen >= c.laughJaw
+          const laughing = this.isLaughing(sig)
           this.tLaughEnter = laughing ? this.tLaughEnter + ms : 0
           if (this.tLaughEnter >= HOLD_LAUGH_ENTER) {
             this.enterLaughing(sig)
@@ -240,7 +240,23 @@ export class ExpressionState {
 
     // ---- 两根进度条：各自独立，互不清零 ----
     this.smileProgress = this.mode !== 'idle' ? 1 : Math.min(1, sig.smile / c.smileEnter)
-    this.laughProgress = this.mode === 'laughing' ? 1 : Math.min(1, sig.jawOpen / c.laughJaw)
+    // 大笑条 = 判定条件本身：条满 ⇔ 再保持 150 ms 就放烟花。
+    // 早期版本条只看张嘴、判定却还要 smile ≥ 0.60，于是出现「大笑条满了却不放烟花」。
+    this.laughProgress = this.mode === 'laughing' ? 1 : this.laughGate(sig)
+  }
+
+  /**
+   * 大笑 = 嘴张到位（jawOpen ≥ laughJaw）且至少在笑（smile ≥ smileExit，这个门槛很低，
+   * 只用来排除打哈欠和说话）。不再要求 smile ≥ 0.60——那条让「大笑」变成了「先笑得很开再张嘴」。
+   */
+  private isLaughing(sig: Signals): boolean {
+    return sig.jawOpen >= this.cfg.laughJaw && sig.smile >= this.cfg.smileExit
+  }
+
+  /** 0–1，两个条件的最小值：任何一个不满足，条就不满 */
+  private laughGate(sig: Signals): number {
+    const c = this.cfg
+    return Math.min(1, sig.jawOpen / c.laughJaw, sig.smile / c.smileExit)
   }
 
   private enterLaughing(sig: Signals): void {

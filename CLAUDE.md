@@ -62,7 +62,7 @@ camera → face(信号总线) → state(状态机) → particles(发射器 + 碰
 | --- | --- |
 | Idle → Smiling | smile ≥ `smileEnter`(0.45) 持续 300 ms |
 | Smiling → Idle | smile < `smileExit`(0.30) 持续 500 ms |
-| Smiling → Laughing | smile ≥ 0.60 且 jawOpen ≥ 0.35 持续 200 ms |
+| Idle / Smiling → Laughing | jawOpen ≥ `laughJaw`(0.35) 且 smile ≥ `smileExit`(0.30) 持续 150 ms（Idle 可直达；嘴在张开时微笑计时最多暂停 400 ms） |
 | Laughing → Smiling | jawOpen < 0.20 持续 400 ms |
 | 任意 → Idle | 无脸持续 1000 ms |
 
@@ -100,7 +100,7 @@ Laughing 期间雨量目标恒为 0。进度条是两根：`smileProgress`、`la
   **禁止 `shadowBlur`**（每颗粒子一次模糊会直接掉到 10 fps）。
 - 碰撞只做「粒子 vs 一个带旋转的椭圆」，无粒子间碰撞，O(n)。
 - 池满时直接丢弃新粒子，绝不动态扩容。
-- 三档预算（雨上限 / 每发烟花）：low 250/100，mid 500/180，high 800/300。
+- 三档预算（雨上限 / 每发烟花）：low 250/140，mid 500/280，high 800/460。
   启动 2 s 测帧时间定初档；EMA 帧时 > 25 ms 持续 3 s 降档，< 14 ms 持续 5 s 升档；
   单帧 > 80 ms 的尖峰（shader 首次编译）不计入 EMA。
 - 预算：主线程单帧 ≤ 16 ms，检测均摊 ≤ 3 ms，粒子更新+绘制 ≤ 6 ms。

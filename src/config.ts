@@ -39,7 +39,7 @@ export const DEFAULT_CONFIG: EffectConfig = {
   laughJaw: 0.35,
   laughExitJaw: 0.2,
   rainMax: 1,
-  fireworkCount: 180,
+  fireworkCount: 320,
   restitution: 0.65,
   burstScale: 1.25,
   hueShift: 0,
@@ -54,7 +54,7 @@ export const SLIDERS = [
   { key: 'smileEnter', min: 0.3, max: 0.7, step: 0.01 },
   { key: 'laughJaw', min: 0.15, max: 0.8, step: 0.01 },
   { key: 'rainMax', min: 0, max: 1, step: 0.05 },
-  { key: 'fireworkCount', min: 60, max: 400, step: 10 },
+  { key: 'fireworkCount', min: 80, max: 600, step: 10 },
   { key: 'burstScale', min: 0.6, max: 2, step: 0.05 },
   { key: 'restitution', min: 0.3, max: 0.9, step: 0.05 },
   { key: 'hueShift', min: -30, max: 30, step: 1 },
@@ -72,9 +72,9 @@ export interface Tier {
 }
 
 export const TIERS: Record<Tier['name'], Tier> = {
-  low: { name: 'low', rainMax: 250, sparkPerBurst: 100, sparkPool: 700 },
-  mid: { name: 'mid', rainMax: 500, sparkPerBurst: 180, sparkPool: 1400 },
-  high: { name: 'high', rainMax: 800, sparkPerBurst: 300, sparkPool: 2200 },
+  low: { name: 'low', rainMax: 250, sparkPerBurst: 140, sparkPool: 900 },
+  mid: { name: 'mid', rainMax: 500, sparkPerBurst: 280, sparkPool: 2000 },
+  high: { name: 'high', rainMax: 800, sparkPerBurst: 460, sparkPool: 3200 },
 }
 
 // ---------- URL 参数 ----------
