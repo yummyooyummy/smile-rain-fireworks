@@ -48,7 +48,7 @@ const GRAVITY = 300 // px/s²（比真实重力慢，粒子才有时间飘落到
 // 直觉版本 v *= 0.985 是线性衰减，快慢粒子一样减速，看起来「匀速散开的彩点」；
 // 真实烟花前 0.5 s 扩得最猛、然后骤然变慢开始飘落——这正是 v² 阻力的形状。
 const SPARK_K = 0.01 // 1/px；v0≈900 px/s 时 k·v0≈9/s：0.5 s 内扩到约 170 px，2 s 约 290 px
-const TRAIL_N = 5 // 每颗火花记最近 5 个位置，画成渐隐的拖尾
+const TRAIL_N = 9 // 每颗火花记最近 9 个位置，画成渐隐的拖尾
 const TWINKLE_RATE = 0.35 // 35% 的爆炸粒子会闪烁
 const CRACKLE_RATE = 0.3 // 30% 的爆炸粒子在燃尽前二次崩裂
 const FLASH_MS = 50
@@ -384,13 +384,10 @@ export class Effects {
     let x: number
     let targetY: number
     if (head) {
-      // 从脸的两侧升空，炸点在头的斜上方——粒子才会落到头上，而不是在头顶正上方炸完直接掉过脸
-      const side = Math.random() < 0.5 ? -1 : 1
-      const gap = head.rx * 1.6 + this.w * (0.04 + Math.random() * 0.16)
-      x = head.cx + side * gap
-      if (x < this.w * 0.06 || x > this.w * 0.94) x = head.cx - side * gap
-      x = Math.min(this.w * 0.94, Math.max(this.w * 0.06, x))
-      targetY = Math.max(this.h * 0.08, head.cy - head.ry * (0.6 + Math.random() * 1.4))
+      // 整个背景均匀升空（Yuqing 决定，不再只在脸两侧）；炸点高度仍参照头：
+      // 落在头顶上方 0.6–1.8 倍头高处，粒子飘落时才会经过头部。
+      x = this.w * (0.1 + Math.random() * 0.8)
+      targetY = Math.max(this.h * 0.08, head.cy - head.ry * (0.6 + Math.random() * 1.2))
     } else {
       x = this.w * (0.12 + Math.random() * 0.76)
       targetY = this.h * (0.12 + Math.random() * 0.26) * (scale < 0.6 ? 1.5 : 1)
@@ -448,7 +445,7 @@ export class Effects {
       const life = 1.4 + Math.random() * 1.2
       this.slife[idx] = life
       this.smax[idx] = life
-      this.ssize[idx] = 7 + Math.random() * 9 * (0.6 + power * 0.4)
+      this.ssize[idx] = 9 + Math.random() * 11 * (0.6 + power * 0.4)
       // 一发烟花以一个主色为主，掺少量其它色，比纯随机好看
       this.scolor[idx] = Math.random() < 0.75 ? hue : (Math.random() * PALETTE.length) | 0
       this.sflash[idx] = 0
@@ -837,7 +834,7 @@ export class Effects {
           const nx2 = k === n ? this.sx[i] : this.shx[base + ((idx + 1) % TRAIL_N)]
           const ny2 = k === n ? this.sy[i] : this.shy[base + ((idx + 1) % TRAIL_N)]
           const w = k / n
-          ctx.globalAlpha = alpha * 0.55 * w
+          ctx.globalAlpha = alpha * 0.65 * w
           ctx.lineWidth = Math.max(0.8, this.ssize[i] * 0.4 * t * w)
           ctx.beginPath()
           ctx.moveTo(px, py)

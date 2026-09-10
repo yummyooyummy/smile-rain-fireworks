@@ -133,7 +133,19 @@ export class ExpressionState {
     // ---- 转移 ----
     if (sig.faceOk) {
       switch (this.mode) {
-        case 'idle':
+        case 'idle': {
+          // 直接大笑也要能放烟花：不强迫用户先经过「微笑 300 ms」这一站。
+          // 早期版本必须 Idle → Smiling → Laughing 串行走，用户一上来就大笑，
+          // 会在 Smiling 的 300 ms 保持期里等一下，感觉「反应不过来」。
+          const laughingNow = sig.smile >= c.laughSmile && sig.jawOpen >= c.laughJaw
+          this.tLaughEnter = laughingNow ? this.tLaughEnter + ms : 0
+          if (this.tLaughEnter >= HOLD_LAUGH_ENTER) {
+            this.reachedSmile = true
+            this.tSmileEnter = 0
+            this.tSmileExit = 0
+            this.enterLaughing(sig)
+            break
+          }
           this.tSmileEnter = sig.smile >= c.smileEnter ? this.tSmileEnter + ms : 0
           if (this.tSmileEnter >= HOLD_SMILE_ENTER) {
             this.mode = 'smiling'
@@ -142,6 +154,7 @@ export class ExpressionState {
             this.tSmileExit = 0
           }
           break
+        }
 
         case 'smiling': {
           this.tSmileExit = sig.smile < c.smileExit ? this.tSmileExit + ms : 0
