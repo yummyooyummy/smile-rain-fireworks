@@ -123,22 +123,45 @@ export class PersonMask implements PersonCollider {
       })
   }
 
+  private polarityVotes = 0 // 连续几帧的读数和当前极性相反
+  private polarityLocked = false
+
+  /**
+   * 极性判定只看四个角上的小方块（各 12×12），不看整条边——手机竖屏离脸近时，
+   * 上沿和左右两边经常全是头发和肩膀，按整条边判会在两种极性之间来回翻，
+   * 表现为雨在人身边一闪一闪。再加迟滞：连续 6 帧都反了才翻，翻过一次就锁住。
+   */
   private detectPolarity(): void {
     const d = this.data as Uint8Array
     const { mw, mh } = this
+    const k = 12
     let n = 0
     let nonzero = 0
-    for (let x = 0; x < mw; x += 2) {
-      n++
-      if (d[x] > 0) nonzero++
+    const box = (x0: number, y0: number) => {
+      for (let y = y0; y < y0 + k; y++)
+        for (let x = x0; x < x0 + k; x++) {
+          n++
+          if (d[y * mw + x] > 0) nonzero++
+        }
     }
-    for (let y = 0; y < mh; y += 2) {
-      n += 2
-      if (d[y * mw] > 0) nonzero++
-      if (d[y * mw + mw - 1] > 0) nonzero++
+    box(0, 0)
+    box(mw - k, 0)
+    box(0, mh - k)
+    box(mw - k, mh - k)
+    const guess = nonzero * 2 > n ? 0 : 1 // 角上大多数是非零 → 非零是背景 → 人是 0
+    if (guess === this.personVal) {
+      this.polarityVotes = 0
+      return
     }
-    // 边缘大多数是非零 → 非零是背景 → 人是 0
-    this.personVal = nonzero * 2 > n ? 0 : 1
+    if (!this.polarityLocked) {
+      this.personVal = guess
+      this.polarityLocked = true
+      return
+    }
+    if (++this.polarityVotes >= 6) {
+      this.personVal = guess
+      this.polarityVotes = 0
+    }
   }
 
   private isPersonVal(v: number): boolean {
@@ -167,12 +190,19 @@ export class PersonMask implements PersonCollider {
       px[i * 4 + 3] = on ? 255 : 0
     }
     this.maskCtx.putImageData(img, 0, 0)
-    const url = `url(${this.maskCanvas.toDataURL('image/png')})`
-    const s = this.clone.style
-    s.maskImage = url
-    s.webkitMaskImage = url
-    this.applyMaskGeometry()
-    this.clone.hidden = false
+    const dataUrl = this.maskCanvas.toDataURL('image/png')
+    // 直接换 mask-image，手机 Safari 会在新图解码完成前先渲染一帧「没有遮罩」——
+    // 整个人像层闪一下。先用 Image 解码完再换，就没有这一帧。
+    const im = new Image()
+    im.onload = () => {
+      const url = `url(${dataUrl})`
+      const st = this.clone.style
+      st.maskImage = url
+      st.webkitMaskImage = url
+      this.applyMaskGeometry()
+      this.clone.hidden = false
+    }
+    im.src = dataUrl
   }
 
   /** mask 要和 object-fit: cover 裁出来的画面严格对齐：同样的缩放、同样的偏移。 */

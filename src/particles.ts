@@ -38,6 +38,9 @@ const RAIN_ALPHA = [0.16, 0.4, 0.8]
 const RAIN_WIDTH = [0.8, 1.6, 2.6]
 const RAIN_DRIFT = [10, 24, 44] // px/s 横向漂移
 const RAIN_STREAK = 0.032 // 拖尾长度 = 速度 × 这个系数
+// 雨的尺寸按屏幕短边缩放：同样 2.6px 粗、30px 长的雨丝，在 1440 宽的桌面上是雨，
+// 在 390 宽的手机上像一根根牙签。不做两套参数，做一个连续的缩放系数。
+const RAIN_REF_SIZE = 820
 const RAIN_LAYER_WEIGHT = [0.5, 0.32, 0.18] // 远层最多，近层最少
 
 const GRAVITY = 300 // px/s²（比真实重力慢，粒子才有时间飘落到人身上再碰撞）
@@ -189,11 +192,13 @@ export class Effects {
   // ---------- 生命周期 ----------
 
   private dpr = 1
+  private rainK = 1
 
   resize(w: number, h: number, dpr: number): void {
     this.w = w
     this.h = h
     this.dpr = dpr
+    this.rainK = Math.min(1, Math.max(0.45, Math.min(w, h) / RAIN_REF_SIZE))
     this.fit(this.ctx)
     if (this.rainCtx) this.fit(this.rainCtx)
   }
@@ -497,9 +502,10 @@ export class Effects {
     this.rlayer[idx] = layer
     this.rx[idx] = Math.random() * (this.w + 160) - 80
     this.ry[idx] = -30 - Math.random() * 160
-    const sp = RAIN_SPEED[layer] * (0.9 + Math.random() * 0.2)
+    const k = this.rainK
+    const sp = RAIN_SPEED[layer] * (0.9 + Math.random() * 0.2) * k
     this.rvy[idx] = sp
-    this.rvx[idx] = RAIN_DRIFT[layer] * (0.8 + Math.random() * 0.4)
+    this.rvx[idx] = RAIN_DRIFT[layer] * (0.8 + Math.random() * 0.4) * k
     this.rlen[idx] = sp * RAIN_STREAK
   }
 
@@ -669,9 +675,9 @@ export class Effects {
     for (let layer = 0; layer < 3; layer++) {
       ctx.beginPath()
       ctx.strokeStyle = this.rainStroke[layer]
-      ctx.lineWidth = RAIN_WIDTH[layer]
+      ctx.lineWidth = Math.max(0.6, RAIN_WIDTH[layer] * this.rainK)
       let any = false
-      const tail = RAIN_DRIFT[layer] * RAIN_STREAK
+      const tail = RAIN_DRIFT[layer] * RAIN_STREAK * this.rainK
       for (let i = 0; i < this.rainCap; i++) {
         if (!this.rAlive[i] || this.rlayer[i] !== layer) continue
         const x = this.rx[i]
