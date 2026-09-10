@@ -113,7 +113,14 @@ export class Hud {
       <div class="banner" id="banner" hidden>
         <span class="banner-dot" aria-hidden="true"></span>
         <span class="banner-text">${copy.manual.banner}</span>
-        <button class="banner-btn" id="reconnectBtn">${copy.manual.reconnect}</button>
+        <span class="banner-rule" aria-hidden="true"></span>
+        <button class="banner-btn" id="reconnectBtn">
+          <span class="banner-btn-label">${copy.manual.reconnect}</span>
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+            <path d="M1.8 6.5a4.7 4.7 0 1 0 1.5-3.4"/>
+            <path d="M1.6 2v3h3"/>
+          </svg>
+        </button>
       </div>
 
       <p class="status" id="statusEl" hidden></p>
@@ -128,9 +135,16 @@ export class Hud {
 
       <p class="toast" id="toastEl" role="status" hidden></p>
 
-      <p class="manual-hint" id="manualHint" hidden>${copy.hud.manualHint}</p>
+      <p class="manual-hint" id="manualHint" hidden>
+        <span class="manual-hint-idle">${copy.hud.manualHint}</span>
+        <span class="manual-hint-hold">${copy.hud.manualRelease}</span>
+      </p>
       <button class="manual" id="manualBtn" aria-label="${copy.hud.manualHint}" hidden>
         <span class="manual-dot"></span>
+        <svg class="manual-ring" viewBox="0 0 68 68" aria-hidden="true">
+          <circle class="manual-ring-track" cx="34" cy="34" r="31"></circle>
+          <circle class="manual-ring-fill" cx="34" cy="34" r="31"></circle>
+        </svg>
       </button>
 
       <button class="share" id="shareBtn" aria-label="${copy.hud.share}" hidden>
@@ -333,7 +347,10 @@ export class Hud {
 
   setReconnecting(on: boolean): void {
     this.bannerBtn.disabled = on
-    this.bannerBtn.textContent = on ? copy.manual.connecting : copy.manual.reconnect
+    const label = this.bannerBtn.querySelector('.banner-btn-label')
+    const text = on ? copy.manual.connecting : copy.manual.reconnect
+    if (label) label.textContent = text
+    else this.bannerBtn.textContent = text
   }
 
   setUiHidden(on: boolean): void {

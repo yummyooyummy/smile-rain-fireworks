@@ -25,6 +25,7 @@
   --ink-on-accent-a30: rgba(27, 18, 14, 0.3);
   --ink-a30: rgba(245, 237, 230, 0.3);
   --paused-dim: rgba(20, 16, 15, 0.72);
+  --accent-hold: rgba(240, 120, 90, 0.26);
   color-scheme: dark;
 }
 
@@ -573,27 +574,28 @@ body {
    否则用户只会觉得「表情识别坏了」，然后关掉页面。 */
 .banner {
   position: absolute;
-  left: 50%;
-  top: calc(22px + env(safe-area-inset-top, 0px));
-  transform: translateX(-50%);
+  left: calc(16px + env(safe-area-inset-left, 0px));
+  top: calc(57px + env(safe-area-inset-top, 0px));
   display: flex;
   align-items: center;
-  gap: 10px;
-  max-width: calc(100vw - 32px);
-  padding: 7px 8px 7px 14px;
+  gap: 8px;
+  height: 34px;
+  max-width: calc(100vw - 176px);
+  padding: 0 12px;
   border-radius: 999px;
-  background: rgba(20, 16, 15, 0.66);
+  background: var(--glass);
   border: 1px solid var(--line);
-  backdrop-filter: blur(8px);
-  font-size: 0.82rem;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-size: 11px;
   color: var(--ink);
   white-space: nowrap;
 }
 
 .banner-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
   background: var(--gold);
   flex: none;
 }
@@ -603,20 +605,35 @@ body {
   text-overflow: ellipsis;
 }
 
+.banner-rule {
+  width: 1px;
+  height: 12px;
+  background: var(--line);
+  flex: none;
+}
+
 .banner-btn {
   flex: none;
-  padding: 5px 12px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(245, 237, 230, 0.08);
-  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
   font: inherit;
-  font-size: 0.78rem;
+  font-size: 11px;
   cursor: pointer;
 }
 
-.banner-btn:hover {
-  background: rgba(245, 237, 230, 0.16);
+.banner-btn svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .banner-btn:disabled {
@@ -629,67 +646,113 @@ body {
   outline-offset: 2px;
 }
 
-@media (max-width: 420px) {
-  .banner {
-    font-size: 0.76rem;
-    padding-left: 12px;
-  }
-}
-
 /* ---------- 手动触发 ---------- */
 
 .manual {
   position: absolute;
-  right: calc(20px + env(safe-area-inset-right, 0px));
-  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  bottom: calc(54px + env(safe-area-inset-bottom, 0px));
   width: 56px;
   height: 56px;
-  border-radius: 50%;
-  border: 1px solid var(--line);
-  background: rgba(20, 16, 15, 0.55);
+  border-radius: 999px;
+  border: 1px solid var(--accent-line);
+  background: var(--accent-tint);
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: grid;
   place-items: center;
   cursor: pointer;
   touch-action: none;
-  transition: transform 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease;
 }
 
 .manual:active {
-  transform: scale(0.93);
+  transform: scale(0.98);
 }
 
 .manual-dot {
   width: 18px;
   height: 18px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), var(--gold));
+  border-radius: 999px;
+  background: var(--grad-primary);
+  transition:
+    width 0.15s ease,
+    height 0.15s ease;
 }
 
 .manual-hint {
   position: absolute;
-  right: calc(20px + 56px + 12px + env(safe-area-inset-right, 0px));
-  bottom: calc(24px + 20px + env(safe-area-inset-bottom, 0px));
+  right: calc(16px + 56px + 12px + env(safe-area-inset-right, 0px));
+  bottom: calc(54px + 20px + env(safe-area-inset-bottom, 0px));
   margin: 0;
-  font-size: 0.75rem;
+  font-size: 11px;
   color: var(--muted);
   white-space: nowrap;
 }
 
-/* 长按时外圈走一圈，走满即发射 */
-.manual::before {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  border-top-color: var(--gold);
-  opacity: 0;
+.manual-hint-hold {
+  display: none;
 }
 
-.manual.is-holding::before {
+#hud:has(.manual.is-holding) .manual-hint-idle {
+  display: none;
+}
+
+#hud:has(.manual.is-holding) .manual-hint-hold {
+  display: inline;
+}
+
+.manual-ring {
+  position: absolute;
+  left: -6px;
+  top: -6px;
+  width: 68px;
+  height: 68px;
+  transform: rotate(-90deg);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.manual-ring-track,
+.manual-ring-fill {
+  fill: none;
+  stroke-width: 2;
+}
+
+.manual-ring-track {
+  stroke: var(--line);
+}
+
+.manual-ring-fill {
+  stroke: var(--gold);
+  stroke-linecap: round;
+  stroke-dasharray: 194.8;
+  stroke-dashoffset: 194.8;
+}
+
+.manual.is-holding {
+  background: var(--accent-hold);
+}
+
+.manual.is-holding .manual-dot {
+  width: 22px;
+  height: 22px;
+}
+
+.manual.is-holding .manual-ring {
   opacity: 1;
-  animation: spin 0.35s linear;
+}
+
+.manual.is-holding .manual-ring-fill {
+  animation: ring-fill 0.35s linear forwards;
+}
+
+@keyframes ring-fill {
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 /* 截图分享：挨着手动圆钮左侧，略小一号，不挡画面中央 */
@@ -957,12 +1020,6 @@ body {
 
   .drawer-head {
     padding-top: 4px;
-  }
-}
-
-@media (max-width: 640px) {
-  .banner {
-    top: calc(68px + env(safe-area-inset-top, 0px));
   }
 }
 

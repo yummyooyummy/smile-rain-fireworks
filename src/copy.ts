@@ -27,6 +27,7 @@ export const copy = {
   },
   hud: {
     manualHint: '点一下下雨 · 长按放烟花',
+    manualRelease: '松手放烟花',
     gear: '设置',
     exit: '退出',
     hideUi: '隐藏界面',
@@ -39,8 +40,8 @@ export const copy = {
   },
   manual: {
     // 手动模式必须自己说出来自己是手动模式，否则用户会以为是识别坏了
-    banner: '手动模式 · 表情识别未开启',
-    reconnect: '重新连接摄像头',
+    banner: '手动模式',
+    reconnect: '重连摄像头',
     connecting: '正在连接…',
   },
   status: {
