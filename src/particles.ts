@@ -164,6 +164,10 @@ export class Effects {
   private palette = new Float32Array(PALETTE.length * 3)
   private rainColor = new Float32Array(3)
   private appliedHue = NaN
+  /** 在 applyPalette 里预拼好，draw 循环只读，避免每帧模板字符串 */
+  private rainStroke: string[] = ['', '', '']
+  private paletteStroke: string[] = ['', '', '', '']
+  private pulseStroke = 'rgb(255,238,214)'
 
   private rainRate = 0
   private headPulse = 0
@@ -292,8 +296,18 @@ export class Effects {
     this.appliedHue = this.cfg.hueShift
     for (let i = 0; i < PALETTE.length; i++) {
       rotateHue(PALETTE[i], this.cfg.hueShift, this.palette, i * 3)
+      const r = this.palette[i * 3] | 0
+      const g = this.palette[i * 3 + 1] | 0
+      const b = this.palette[i * 3 + 2] | 0
+      this.paletteStroke[i] = 'rgb(' + r + ',' + g + ',' + b + ')'
     }
     rotateHue(RAIN_RGB, this.cfg.hueShift * 0.3, this.rainColor, 0)
+    const rr = this.rainColor[0] | 0
+    const rg = this.rainColor[1] | 0
+    const rb = this.rainColor[2] | 0
+    for (let layer = 0; layer < 3; layer++) {
+      this.rainStroke[layer] = 'rgba(' + rr + ',' + rg + ',' + rb + ',' + RAIN_ALPHA[layer] + ')'
+    }
     this.buildGlow()
   }
 
@@ -654,10 +668,9 @@ export class Effects {
   private drawRain(ctx: CanvasRenderingContext2D): void {
     ctx.globalCompositeOperation = 'source-over'
     ctx.lineCap = 'round'
-    const rc = `${this.rainColor[0] | 0},${this.rainColor[1] | 0},${this.rainColor[2] | 0}`
     for (let layer = 0; layer < 3; layer++) {
       ctx.beginPath()
-      ctx.strokeStyle = `rgba(${rc},${RAIN_ALPHA[layer]})`
+      ctx.strokeStyle = this.rainStroke[layer]
       ctx.lineWidth = RAIN_WIDTH[layer]
       let any = false
       const tail = RAIN_DRIFT[layer] * RAIN_STREAK
@@ -681,9 +694,11 @@ export class Effects {
       ctx.globalCompositeOperation = 'lighter'
       ctx.beginPath()
       ctx.ellipse(head.cx, head.cy, head.rx, head.ry, head.rot, 0, Math.PI * 2)
-      ctx.strokeStyle = `rgba(255,238,214,${0.32 * t})`
+      ctx.globalAlpha = 0.32 * t
+      ctx.strokeStyle = this.pulseStroke
       ctx.lineWidth = 2 + 7 * (1 - t)
       ctx.stroke()
+      ctx.globalAlpha = 1
     }
 
     ctx.globalCompositeOperation = 'lighter'
@@ -705,12 +720,11 @@ export class Effects {
     // 升空中的烟花弹：一个亮点 + 一条尾焰
     for (let i = 0; i < MAX_ROCKETS; i++) {
       if (!this.kAlive[i]) continue
-      const c = this.kcolor[i] * 3
       ctx.globalAlpha = 0.9
       ctx.drawImage(glow[this.kcolor[i]], this.kx[i] - 11, this.ky[i] - 11, 22, 22)
       ctx.globalAlpha = 0.45
       ctx.beginPath()
-      ctx.strokeStyle = `rgb(${this.palette[c] | 0},${this.palette[c + 1] | 0},${this.palette[c + 2] | 0})`
+      ctx.strokeStyle = this.paletteStroke[this.kcolor[i]]
       ctx.lineWidth = 2
       ctx.moveTo(this.kx[i], this.ky[i])
       ctx.lineTo(this.kx[i] - this.kvx[i] * 0.05, this.ky[i] - this.kvy[i] * 0.05)
@@ -730,10 +744,9 @@ export class Effects {
       const dx = this.sx[i] - this.spx[i]
       const dy = this.sy[i] - this.spy[i]
       if (dx * dx + dy * dy > 4) {
-        const c = this.scolor[i] * 3
         ctx.globalAlpha = alpha * 0.5
         ctx.beginPath()
-        ctx.strokeStyle = `rgb(${this.palette[c] | 0},${this.palette[c + 1] | 0},${this.palette[c + 2] | 0})`
+        ctx.strokeStyle = this.paletteStroke[this.scolor[i]]
         ctx.lineWidth = Math.max(1, this.ssize[i] * 0.35 * t)
         ctx.moveTo(this.spx[i] - dx * 1.5, this.spy[i] - dy * 1.5)
         ctx.lineTo(this.sx[i], this.sy[i])
