@@ -287,7 +287,7 @@ function updateHud(sig: ReturnType<FaceTracker['sample']>, now: number): void {
         `rainRate  ${state.rainRate.toFixed(2)}   guide ${state.guideProgress.toFixed(2)}`,
         `fps       ${(1000 / emaFrame).toFixed(0)}   frame ${emaFrame.toFixed(1)}ms`,
         `detect    ${face.lastDetectMs.toFixed(1)}ms (${face.delegate}, 每 ${DETECT_EVERY} 帧)`,
-        `assets    ${face.assetSource}`,
+        `assets    ${face.assetSource}   headRot ${face.headRotDeg.toFixed(1)}°`,
         `tier      ${tier.name}   rain ${s.rainAlive}   spark ${s.sparkAlive}   rocket ${s.rocketAlive}`,
         `collide   ${s.collisions}/frame`,
       ].join('\n'),

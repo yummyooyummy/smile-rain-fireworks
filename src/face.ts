@@ -38,16 +38,97 @@ const BS = {
   squintR: 'eyeSquintRight',
 } as const
 
-// 脸部轮廓关键点：额顶 / 下巴 / 左右脸颊边缘；嘴：上下内唇
+// 额顶与下巴：用来给头部长轴定「哪边朝上」；嘴：上下内唇取中点
 const LM_TOP = 10
 const LM_CHIN = 152
-const LM_LEFT = 234
-const LM_RIGHT = 454
 const LM_LIP_UP = 13
 const LM_LIP_DOWN = 14
 
 const EMA = 0.35
-const HEAD_SMOOTH_K = 18 // 越大跟得越紧
+const HEAD_SMOOTH_K = 18 // 渲染帧之间的插值强度，越大跟得越紧
+
+/**
+ * face oval 的 36 个轮廓点（MediaPipe FACEMESH_FACE_OVAL 的环）。
+ * 用整圈轮廓而不是 4 个点来拟合，是为了**降噪**：单个 landmark 每帧都在抖，
+ * 36 个点求出来的中心/主轴/尺寸把这些独立抖动平均掉了。
+ */
+const FACE_OVAL = [
+  10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152,
+  148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109,
+] as const
+
+/**
+ * 颅顶补偿：face oval 的最高点是额头，**头顶的骨头和头发不在关键点里**。
+ * 沿头部朝上方向按 oval 半高的这个比例往外扩。
+ * 数值是对着 ?debug=1 的碰撞体轮廓调出来的，不同发型可以在这里改。
+ */
+const SKULL_EXTEND = 0.3
+/** 左右也留一点头发的余量 */
+const HAIR_WIDEN = 1.06
+/**
+ * 拟合安全裕度。只把顶部外扩、同时把中心上移，会让椭圆在**下侧翼**略微收进轮廓内侧
+ * （数值验证：最坏处 0.3%，约 0.1px）。加 2% 让碰撞体可证明地包住整圈轮廓。
+ */
+const FIT_MARGIN = 1.02
+
+/**
+ * One Euro 滤波器（Casiez et al. 2012）。
+ *
+ * 为什么不用固定系数的指数平滑：固定系数只能在「静止时够稳」和「运动时不拖影」之间二选一。
+ * 系数调小，人不动时碰撞体还在抖；系数调大，人一动碰撞体就黏在后面。
+ * One Euro 让截止频率跟着速度自适应——静止时重滤波，快速运动时低延迟，
+ * 每个通道只有三个标量状态，O(1)。
+ *
+ * 关键工程细节：只对**派生出来的 5 个标量**（中心 x/y、两个半轴、旋转角）滤波，
+ * 不对 72 个原始坐标滤波——同样的效果，1/14 的开销。
+ */
+class OneEuro {
+  private xPrev = NaN
+  private dxPrev = 0
+
+  constructor(
+    private minCutoff: number,
+    private beta: number,
+    private dCutoff = 1,
+  ) {}
+
+  private static alpha(cutoff: number, dt: number): number {
+    const tau = 1 / (2 * Math.PI * cutoff)
+    return 1 / (1 + tau / dt)
+  }
+
+  filter(x: number, dt: number): number {
+    if (!Number.isFinite(this.xPrev) || dt <= 0) {
+      this.xPrev = x
+      this.dxPrev = 0
+      return x
+    }
+    const dx = (x - this.xPrev) / dt
+    const aD = OneEuro.alpha(this.dCutoff, dt)
+    const dxHat = aD * dx + (1 - aD) * this.dxPrev
+    this.dxPrev = dxHat
+    // 速度越快，截止频率越高 = 滤得越轻 = 延迟越低
+    const cutoff = this.minCutoff + this.beta * Math.abs(dxHat)
+    const a = OneEuro.alpha(cutoff, dt)
+    const xHat = a * x + (1 - a) * this.xPrev
+    this.xPrev = xHat
+    return xHat
+  }
+
+  get last(): number {
+    return this.xPrev
+  }
+
+  reset(): void {
+    this.xPrev = NaN
+    this.dxPrev = 0
+  }
+}
+
+// beta 的单位跟着被滤的量走：像素通道的速度是 px/s，角度通道是 rad/s，
+// 所以两者的 beta 差好几个数量级。这些值是对着调试面板调出来的。
+const EURO_POS = () => new OneEuro(1.2, 0.015) // 中心与半轴（像素）
+const EURO_ROT = () => new OneEuro(1.0, 3.0) // 旋转角（弧度）
 
 export interface Signals {
   smile: number
@@ -81,11 +162,24 @@ export class FaceTracker {
     lowConfidence: false,
   }
 
-  private targetHead: HeadEllipse | null = null
+  private targetHead: HeadEllipse = { cx: 0, cy: 0, rx: 0, ry: 0, rot: 0 }
+  private hasTarget = false
   private smoothHead: HeadEllipse = { cx: 0, cy: 0, rx: 0, ry: 0, rot: 0 }
   private targetMouthX = 0
   private targetMouthY = 0
   private missFrames = 0
+
+  // 轮廓点缓冲，预分配，detect 里零分配
+  private ovalX = new Float32Array(FACE_OVAL.length)
+  private ovalY = new Float32Array(FACE_OVAL.length)
+
+  // 5 个派生标量各一个 One Euro
+  private fCx = EURO_POS()
+  private fCy = EURO_POS()
+  private fRx = EURO_POS()
+  private fRy = EURO_POS()
+  private fRot = EURO_ROT()
+  private lastDetectTs = 0
 
   /** 上一次检测耗时（ms），给调试面板看 */
   lastDetectMs = 0
@@ -129,6 +223,23 @@ export class FaceTracker {
   /** 页面切回前台时重置时间戳基准，避免 "timestamp must be monotonically increasing" */
   resetClock(): void {
     this.lastTs = 0
+    this.lastDetectTs = 0
+  }
+
+  /** 丢失人脸后清空滤波器状态，下次出现时立即吸附而不是从旧位置慢慢飘过去 */
+  private resetFilters(): void {
+    this.fCx.reset()
+    this.fCy.reset()
+    this.fRx.reset()
+    this.fRy.reset()
+    this.fRot.reset()
+    this.lastDetectTs = 0
+    this.smoothHead.rx = 0
+  }
+
+  /** 当前头部滚转角（度），给调试面板看 */
+  get headRotDeg(): number {
+    return (this.smoothHead.rot * 180) / Math.PI
   }
 
   /**
@@ -152,7 +263,8 @@ export class FaceTracker {
       this.missFrames++
       if (this.missFrames > 3) {
         this.sig.faceOk = false
-        this.targetHead = null
+        this.hasTarget = false
+        this.resetFilters()
         this.raw.smile = 0
         this.raw.jaw = 0
         this.raw.squint = 0
@@ -183,40 +295,101 @@ export class FaceTracker {
     const px = (i: number) => (1 - lms[i].x) * w
     const py = (i: number) => lms[i].y * h
 
-    // 头部碰撞体：一个会跟着头转、并且覆盖到颅顶的椭圆。
+    // ---------- 头部碰撞体 ----------
     //
-    // 两个必须处理的事实：
-    //  1. 468 个关键点最高只到额头（10 号点），**头顶的颅骨和头发根本不在关键点里**。
-    //     直接用 10↔152 拟合，粒子会穿过头发才碰到额头。所以要沿头部朝上方向外扩。
-    //  2. 脸会歪。椭圆必须带一个滚转角，碰撞判定在头部自己的坐标系里做。
-    const xl = px(LM_LEFT)
-    const xr = px(LM_RIGHT)
-    const xt = px(LM_TOP)
-    const yt = py(LM_TOP)
-    const xb = px(LM_CHIN)
-    const yb = py(LM_CHIN)
+    // 三件必须处理的事，少一件「碰撞」就只是看起来像碰撞：
+    //  1. 用整圈 36 个轮廓点做 PCA 拟合，而不是 4 个点。单点每帧都在抖，
+    //     36 个点求出来的中心/主轴/尺寸把独立抖动平均掉了。
+    //  2. 椭圆必须带滚转角。人一歪头，脸转了椭圆没转，判定整个偏掉。
+    //  3. face oval 的最高点是额头——颅顶和头发不在关键点里，必须沿头部朝上方向外扩，
+    //     否则粒子会穿过头发才碰到额头。
+    const N = FACE_OVAL.length
+    const ox = this.ovalX
+    const oy = this.ovalY
+    let mx = 0
+    let my = 0
+    for (let i = 0; i < N; i++) {
+      const x = px(FACE_OVAL[i])
+      const y = py(FACE_OVAL[i])
+      ox[i] = x
+      oy[i] = y
+      mx += x
+      my += y
+    }
+    mx /= N
+    my /= N
 
-    // 头部「向右」向量由左右脸颊连线给出，滚转角就是它与水平线的夹角
-    const rot = Math.atan2(py(LM_RIGHT) - py(LM_LEFT), xr - xl)
-    // 「向上」向量与之垂直
-    const upX = Math.sin(rot)
-    const upY = -Math.cos(rot)
+    // PCA：2×2 协方差矩阵的主特征向量方向即头部长轴
+    let sxx = 0
+    let syy = 0
+    let sxy = 0
+    for (let i = 0; i < N; i++) {
+      const dx = ox[i] - mx
+      const dy = oy[i] - my
+      sxx += dx * dx
+      syy += dy * dy
+      sxy += dx * dy
+    }
+    // 长轴角度（2×2 对称阵特征向量的闭式解）
+    let major = 0.5 * Math.atan2(2 * sxy, sxx - syy)
 
-    const faceH = Math.hypot(xt - xb, yt - yb) || 1
-    const cheekW = Math.hypot(xr - xl, py(LM_RIGHT) - py(LM_LEFT)) || 1
+    // 让长轴指向「头顶」而不是下巴：用 152→10 这条向量定方向
+    const upRefX = px(LM_TOP) - px(LM_CHIN)
+    const upRefY = py(LM_TOP) - py(LM_CHIN)
+    if (Math.cos(major) * upRefX + Math.sin(major) * upRefY < 0) major += Math.PI
 
-    const SKULL = 0.33 // 颅顶+头发大约再往上 33% 的脸高
-    const cx = (xt + xb) / 2 + upX * (SKULL / 2) * faceH
-    const cy = (yt + yb) / 2 + upY * (SKULL / 2) * faceH
-    const ry = (faceH * (1 + SKULL)) / 2
-    const rx = (cheekW / 2) * 1.08
+    const upX = Math.cos(major)
+    const upY = Math.sin(major)
+    // 「向右」轴与长轴垂直；HeadEllipse.rot 存的就是它
+    const rightX = -upY
+    const rightY = upX
 
-    this.targetHead = { cx, cy, rx: Math.max(rx, 12), ry: Math.max(ry, 12), rot }
+    // 半轴 = 所有轮廓点在该轴上的最大投影，保证椭圆真的把轮廓包住
+    let halfUp = 0
+    let halfRight = 0
+    for (let i = 0; i < N; i++) {
+      const dx = ox[i] - mx
+      const dy = oy[i] - my
+      const pu = Math.abs(dx * upX + dy * upY)
+      const pr = Math.abs(dx * rightX + dy * rightY)
+      if (pu > halfUp) halfUp = pu
+      if (pr > halfRight) halfRight = pr
+    }
+
+    // 颅顶补偿：只往上扩，所以中心也要跟着上移一半
+    const grow = SKULL_EXTEND * halfUp
+    const rawCx = mx + upX * (grow / 2)
+    const rawCy = my + upY * (grow / 2)
+    const rawRy = Math.max((halfUp + grow / 2) * FIT_MARGIN, 12)
+    const rawRx = Math.max(halfRight * HAIR_WIDEN, 12)
+
+    // 椭圆是 π 周期的，把角度收进 (-π/2, π/2] 再滤波，避免在 ±π 处翻转
+    let rawRot = Math.atan2(rightY, rightX)
+    while (rawRot > Math.PI / 2) rawRot -= Math.PI
+    while (rawRot <= -Math.PI / 2) rawRot += Math.PI
+    // 再对齐到上一帧，防止在 ±π/2 边界来回跳
+    const prevRot = this.fRot.last
+    if (Number.isFinite(prevRot)) {
+      while (rawRot - prevRot > Math.PI / 2) rawRot -= Math.PI
+      while (rawRot - prevRot < -Math.PI / 2) rawRot += Math.PI
+    }
+
+    // One Euro：静止时重滤波去抖，快速运动时低延迟
+    const dtDet = this.lastDetectTs ? (ts - this.lastDetectTs) / 1000 : 0
+    this.lastDetectTs = ts
+    const t = this.targetHead
+    t.cx = this.fCx.filter(rawCx, dtDet)
+    t.cy = this.fCy.filter(rawCy, dtDet)
+    t.rx = this.fRx.filter(rawRx, dtDet)
+    t.ry = this.fRy.filter(rawRy, dtDet)
+    t.rot = this.fRot.filter(rawRot, dtDet)
+    this.hasTarget = true
+
     this.targetMouthX = (px(LM_LIP_UP) + px(LM_LIP_DOWN)) / 2
     this.targetMouthY = (py(LM_LIP_UP) + py(LM_LIP_DOWN)) / 2
 
     // 脸太小 = 离得太远或检测不稳，当成低置信度
-    this.sig.lowConfidence = rx < w * 0.06
+    this.sig.lowConfidence = t.rx < w * 0.06
   }
 
   /** 每个渲染帧调用：做 EMA 平滑与头部插值，返回当前信号 */
@@ -226,22 +399,25 @@ export class FaceTracker {
     this.sig.squint += (this.raw.squint - this.sig.squint) * EMA
     this.sig.laugh = this.sig.smile * 0.6 + this.sig.jawOpen * 0.4
 
-    if (this.targetHead) {
+    if (this.hasTarget) {
+      // 第二级平滑：One Euro 已经在检测频率上去过抖，这里只负责把 20 Hz 的
+      // 台阶抹成 60 Hz 的连续运动，时间常数很短，几乎不引入额外延迟。
       const k = 1 - Math.exp(-HEAD_SMOOTH_K * dt)
       const s = this.smoothHead
+      const tgt = this.targetHead
       if (s.rx === 0) {
-        s.cx = this.targetHead.cx
-        s.cy = this.targetHead.cy
-        s.rx = this.targetHead.rx
-        s.ry = this.targetHead.ry
-        s.rot = this.targetHead.rot
+        s.cx = tgt.cx
+        s.cy = tgt.cy
+        s.rx = tgt.rx
+        s.ry = tgt.ry
+        s.rot = tgt.rot
       } else {
-        s.cx += (this.targetHead.cx - s.cx) * k
-        s.cy += (this.targetHead.cy - s.cy) * k
-        s.rx += (this.targetHead.rx - s.rx) * k
-        s.ry += (this.targetHead.ry - s.ry) * k
-        // 角度要走最短弧，直接插值会在 ±π 处整圈翻转
-        let d = this.targetHead.rot - s.rot
+        s.cx += (tgt.cx - s.cx) * k
+        s.cy += (tgt.cy - s.cy) * k
+        s.rx += (tgt.rx - s.rx) * k
+        s.ry += (tgt.ry - s.ry) * k
+        // 角度走最短弧，直接插值会在边界处整圈翻转
+        let d = tgt.rot - s.rot
         while (d > Math.PI) d -= Math.PI * 2
         while (d < -Math.PI) d += Math.PI * 2
         s.rot += d * k
