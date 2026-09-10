@@ -91,13 +91,6 @@ const hud = new Hud(
   person,
 )
 
-// 抽屉里的「重看新手引导」
-window.addEventListener('replay-guide', () => {
-  state.resetGuide()
-  guideDone = false
-  guideDoneAt = 0
-})
-
 // 供抽屉读写配置的最小接口，避免 Cursor 改动引擎内部
 Object.assign(window, {
   __fx: {
