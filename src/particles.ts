@@ -18,6 +18,8 @@ export interface HeadEllipse {
   cy: number
   rx: number
   ry: number
+  /** 头部滚转角（弧度）。椭圆必须跟着头一起转，否则一歪头判定就整个偏掉。 */
+  rot: number
 }
 
 /** 烟花调色板（暗调暖色，4 色，见设计定义 §4） */
@@ -467,6 +469,11 @@ export class Effects {
     const cy = hasHead ? head!.cy : 0
     const rx = hasHead ? head!.rx : 1
     const ry = hasHead ? head!.ry : 1
+    // 头部局部坐标系：先把粒子旋转进椭圆自己的坐标系再判定，
+    // 这样歪头、侧头时碰撞体跟着转，而不是永远正着放。
+    const rot = hasHead ? head!.rot : 0
+    const cosR = Math.cos(rot)
+    const sinR = Math.sin(rot)
     const bottom = this.h + 60
 
     // --- 烟花弹升空 ---
@@ -506,16 +513,23 @@ export class Effects {
       // 只有近处两层、且还没溅过的雨滴，在头顶那段弧线上溅一次水花。
       // 雨滴继续往下走——早期版本让它消失，脸上会出现一个硬边圆形空洞。
       if (hasHead && this.rlayer[i] >= 1 && !this.rsplashed[i]) {
-        const u = (this.rx[i] - cx) / rx
-        const v = (this.ry[i] - cy) / ry
+        const dx = this.rx[i] - cx
+        const dy = this.ry[i] - cy
+        const lx = dx * cosR + dy * sinR
+        const ly = -dx * sinR + dy * cosR
+        const u = lx / rx
+        const v = ly / ry
         if (u * u + v * v < 1) {
           this.rsplashed[i] = 1
-          let nx = u / rx
-          let ny = v / ry
-          const nl = Math.hypot(nx, ny) || 1
-          nx /= nl
-          ny /= nl
-          if (ny < -0.25) this.splash(this.rx[i], this.ry[i], nx, ny) // 只在上半弧
+          // 「上半弧」是相对头部的上方，不是屏幕的上方——歪头时也要打在头顶
+          if (v < -0.25) {
+            let lnx = u / rx
+            let lny = v / ry
+            const nl = Math.hypot(lnx, lny) || 1
+            lnx /= nl
+            lny /= nl
+            this.splash(this.rx[i], this.ry[i], lnx * cosR - lny * sinR, lnx * sinR + lny * cosR)
+          }
         }
       }
     }
@@ -550,20 +564,28 @@ export class Effects {
       }
 
       if (!hasHead) continue
-      const u = (this.sx[i] - cx) / rx
-      const v = (this.sy[i] - cy) / ry
+      const dx = this.sx[i] - cx
+      const dy = this.sy[i] - cy
+      const lx = dx * cosR + dy * sinR
+      const ly = -dx * sinR + dy * cosR
+      const u = lx / rx
+      const v = ly / ry
       const d2 = u * u + v * v
       if (d2 >= 1 || d2 === 0) continue
 
-      // 在椭圆内 → 推回边界，算出法线
+      // 在椭圆内 → 沿局部坐标推回边界，算出法线后再旋转回世界坐标
       const s = 1 / Math.sqrt(d2)
-      this.sx[i] = cx + u * s * rx
-      this.sy[i] = cy + v * s * ry
-      let nx = u / rx
-      let ny = v / ry
-      const nl = Math.hypot(nx, ny) || 1
-      nx /= nl
-      ny /= nl
+      const bx = u * s * rx
+      const by = v * s * ry
+      this.sx[i] = cx + bx * cosR - by * sinR
+      this.sy[i] = cy + bx * sinR + by * cosR
+      let lnx = u / rx
+      let lny = v / ry
+      const nl = Math.hypot(lnx, lny) || 1
+      lnx /= nl
+      lny /= nl
+      const nx = lnx * cosR - lny * sinR
+      const ny = lnx * sinR + lny * cosR
 
       this.collisions++
       if (this.headPulseCooldown <= 0) {
@@ -622,7 +644,7 @@ export class Effects {
       const t = this.headPulse / PULSE_MS
       ctx.globalCompositeOperation = 'lighter'
       ctx.beginPath()
-      ctx.ellipse(head.cx, head.cy, head.rx, head.ry, 0, 0, Math.PI * 2)
+      ctx.ellipse(head.cx, head.cy, head.rx, head.ry, head.rot, 0, Math.PI * 2)
       ctx.strokeStyle = `rgba(255,238,214,${0.32 * t})`
       ctx.lineWidth = 2 + 7 * (1 - t)
       ctx.stroke()
@@ -681,7 +703,7 @@ export class Effects {
     ctx.strokeStyle = 'rgba(111,195,184,0.7)'
     ctx.lineWidth = 1.5
     ctx.beginPath()
-    ctx.ellipse(head.cx, head.cy, head.rx, head.ry, 0, 0, Math.PI * 2)
+    ctx.ellipse(head.cx, head.cy, head.rx, head.ry, head.rot, 0, Math.PI * 2)
     ctx.stroke()
     ctx.restore()
   }

@@ -116,7 +116,7 @@ window.addEventListener('keydown', (e) => {
 
 // 调试用的虚拟头：没有摄像头时，按住/移动指针即可当成一颗头，
 // 用来验证碰撞与分裂效果（Cursor 调试碰撞时也用这个，不必对着镜头）。
-const testHead = { cx: 0, cy: 0, rx: 95, ry: 125 }
+const testHead = { cx: 0, cy: 0, rx: 95, ry: 125, rot: 0 }
 let testHeadOn = false
 window.addEventListener('pointermove', (e) => {
   if (cameraOn || !cfg.showDebug) return

@@ -82,7 +82,7 @@ export class FaceTracker {
   }
 
   private targetHead: HeadEllipse | null = null
-  private smoothHead: HeadEllipse = { cx: 0, cy: 0, rx: 0, ry: 0 }
+  private smoothHead: HeadEllipse = { cx: 0, cy: 0, rx: 0, ry: 0, rot: 0 }
   private targetMouthX = 0
   private targetMouthY = 0
   private missFrames = 0
@@ -183,16 +183,35 @@ export class FaceTracker {
     const px = (i: number) => (1 - lms[i].x) * w
     const py = (i: number) => lms[i].y * h
 
+    // 头部碰撞体：一个会跟着头转、并且覆盖到颅顶的椭圆。
+    //
+    // 两个必须处理的事实：
+    //  1. 468 个关键点最高只到额头（10 号点），**头顶的颅骨和头发根本不在关键点里**。
+    //     直接用 10↔152 拟合，粒子会穿过头发才碰到额头。所以要沿头部朝上方向外扩。
+    //  2. 脸会歪。椭圆必须带一个滚转角，碰撞判定在头部自己的坐标系里做。
     const xl = px(LM_LEFT)
     const xr = px(LM_RIGHT)
+    const xt = px(LM_TOP)
     const yt = py(LM_TOP)
+    const xb = px(LM_CHIN)
     const yb = py(LM_CHIN)
-    const cx = (xl + xr) / 2
-    const cy = (yt + yb) / 2
-    const rx = (Math.abs(xr - xl) / 2) * 1.12
-    const ry = (Math.abs(yb - yt) / 2) * 1.08
 
-    this.targetHead = { cx, cy, rx: Math.max(rx, 12), ry: Math.max(ry, 12) }
+    // 头部「向右」向量由左右脸颊连线给出，滚转角就是它与水平线的夹角
+    const rot = Math.atan2(py(LM_RIGHT) - py(LM_LEFT), xr - xl)
+    // 「向上」向量与之垂直
+    const upX = Math.sin(rot)
+    const upY = -Math.cos(rot)
+
+    const faceH = Math.hypot(xt - xb, yt - yb) || 1
+    const cheekW = Math.hypot(xr - xl, py(LM_RIGHT) - py(LM_LEFT)) || 1
+
+    const SKULL = 0.33 // 颅顶+头发大约再往上 33% 的脸高
+    const cx = (xt + xb) / 2 + upX * (SKULL / 2) * faceH
+    const cy = (yt + yb) / 2 + upY * (SKULL / 2) * faceH
+    const ry = (faceH * (1 + SKULL)) / 2
+    const rx = (cheekW / 2) * 1.08
+
+    this.targetHead = { cx, cy, rx: Math.max(rx, 12), ry: Math.max(ry, 12), rot }
     this.targetMouthX = (px(LM_LIP_UP) + px(LM_LIP_DOWN)) / 2
     this.targetMouthY = (py(LM_LIP_UP) + py(LM_LIP_DOWN)) / 2
 
@@ -215,11 +234,17 @@ export class FaceTracker {
         s.cy = this.targetHead.cy
         s.rx = this.targetHead.rx
         s.ry = this.targetHead.ry
+        s.rot = this.targetHead.rot
       } else {
         s.cx += (this.targetHead.cx - s.cx) * k
         s.cy += (this.targetHead.cy - s.cy) * k
         s.rx += (this.targetHead.rx - s.rx) * k
         s.ry += (this.targetHead.ry - s.ry) * k
+        // 角度要走最短弧，直接插值会在 ±π 处整圈翻转
+        let d = this.targetHead.rot - s.rot
+        while (d > Math.PI) d -= Math.PI * 2
+        while (d < -Math.PI) d += Math.PI * 2
+        s.rot += d * k
       }
       this.sig.head = s
       this.sig.mouthX += (this.targetMouthX - this.sig.mouthX) * k
