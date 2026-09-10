@@ -18,8 +18,14 @@ export interface EffectConfig {
   fireworkCount: number
   /** 碰撞弹性 */
   restitution: number
+  /** 烟花炸开范围倍率（1 = 基准） */
+  burstScale: number
   /** 调色板色相偏移（度） */
   hueShift: number
+  /** 画出当前碰撞体（椭圆或人像遮罩） */
+  showCollider: boolean
+  /** 人像分割：遮挡 + 像素级碰撞（低档机自动关） */
+  personSeg: boolean
   /** 是否显示引导提示与进度条 */
   showGuide: boolean
   /** 是否显示调试数据 */
@@ -35,7 +41,10 @@ export const DEFAULT_CONFIG: EffectConfig = {
   rainMax: 1,
   fireworkCount: 180,
   restitution: 0.65,
+  burstScale: 1.25,
   hueShift: 0,
+  showCollider: false,
+  personSeg: true,
   showGuide: true,
   showDebug: false,
 }
@@ -46,6 +55,7 @@ export const SLIDERS = [
   { key: 'laughJaw', min: 0.15, max: 0.8, step: 0.01 },
   { key: 'rainMax', min: 0, max: 1, step: 0.05 },
   { key: 'fireworkCount', min: 60, max: 400, step: 10 },
+  { key: 'burstScale', min: 0.6, max: 2, step: 0.05 },
   { key: 'restitution', min: 0.3, max: 0.9, step: 0.05 },
   { key: 'hueShift', min: -30, max: 30, step: 1 },
 ] as const

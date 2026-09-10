@@ -49,6 +49,7 @@ function applyConfig(next: EffectConfig): void {
   cfg = next
   effects.setConfig(cfg)
   state.setConfig(cfg)
+  applySegTier()
 }
 
 let tier: Tier = flags.tier ? TIERS[flags.tier] : TIERS.mid
@@ -147,7 +148,7 @@ function resize(): void {
 
 /** 分割按档位开关：high 每 4 帧（≈15 Hz），mid 每 6 帧（≈10 Hz），low 关。 */
 function applySegTier(): void {
-  const want = cameraOn && flags.seg && tier.name !== 'low'
+  const want = cameraOn && flags.seg && cfg.personSeg && tier.name !== 'low'
   segEvery = tier.name === 'high' ? 4 : 6
   if (want && !segOn) {
     segOn = true
@@ -372,7 +373,10 @@ function loop(now: number): void {
 
   // 6. 绘制（人像模式下头部脉冲那圈椭圆没有意义，不画）
   effects.draw(usePerson ? null : head)
-  if (cfg.showDebug && head) effects.drawDebugHead(head)
+  if (cfg.showDebug || cfg.showCollider) {
+    if (usePerson) person.drawDebug(effects.ctx2d, w)
+    else if (head) effects.drawDebugHead(head)
+  }
 
   // 7. HUD
   updateHud(sig, now)

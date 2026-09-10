@@ -220,6 +220,10 @@ export class Effects {
     return this.tier
   }
 
+  get ctx2d(): CanvasRenderingContext2D {
+    return this.ctx
+  }
+
   /** 人像遮挡开启时，雨画到人身后那层；关闭时画回同一张 canvas。 */
   setRainLayer(canvas: HTMLCanvasElement | null): void {
     this.rainCtx = canvas ? (canvas.getContext('2d') as CanvasRenderingContext2D) : null
@@ -390,7 +394,7 @@ export class Effects {
   burst(x: number, y: number, power: number, scale = 1): void {
     const base = Math.min(this.cfg.fireworkCount, this.tier.sparkPerBurst)
     const count = Math.max(12, Math.round(base * scale * (0.55 + 0.45 * power)))
-    const speed = 270 + 320 * power
+    const speed = (270 + 320 * power) * this.cfg.burstScale
     const hue = (Math.random() * PALETTE.length) | 0
     this.addFlash(x, y, hue, 0.7 + 0.5 * power * scale)
     for (let i = 0; i < count; i++) {

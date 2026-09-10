@@ -167,7 +167,11 @@ export class PersonMask implements PersonCollider {
     const img = this.maskImg as ImageData
     const px = img.data
     for (let i = 0, n = mw * mh; i < n; i++) {
-      px[i * 4 + 3] = this.isPersonVal(data[i]) ? 255 : 0
+      const on = this.isPersonVal(data[i])
+      px[i * 4] = 111
+      px[i * 4 + 1] = 195
+      px[i * 4 + 2] = 184
+      px[i * 4 + 3] = on ? 255 : 0
     }
     this.maskCtx.putImageData(img, 0, 0)
     const url = `url(${this.maskCanvas.toDataURL('image/png')})`
@@ -228,6 +232,19 @@ export class PersonMask implements PersonCollider {
     }
     out[0] = nx / l
     out[1] = ny / l
+  }
+
+  /** 调试：把遮罩按 cover + 镜像画到画布上（青色半透明），零像素运算，一次 drawImage。 */
+  drawDebug(ctx: CanvasRenderingContext2D, w: number): void {
+    if (!this.data) return
+    const m = this.map
+    ctx.save()
+    ctx.globalCompositeOperation = 'source-over'
+    ctx.globalAlpha = 0.28
+    ctx.translate(w, 0)
+    ctx.scale(-1, 1)
+    ctx.drawImage(this.maskCanvas, m.offX, m.offY, this.vw * m.scale, this.vh * m.scale)
+    ctx.restore()
   }
 
   stop(): void {

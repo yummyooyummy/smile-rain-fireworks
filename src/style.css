@@ -475,8 +475,9 @@ body {
 }
 
 .icon-btn svg .knob {
-  fill: var(--icon-knob);
-  stroke: none;
+  fill: currentColor;
+  stroke: var(--ground-2);
+  stroke-width: 2;
 }
 
 .icon-btn:active {
@@ -859,6 +860,22 @@ body {
   margin: 0 auto;
   border-radius: 999px;
   background: var(--glass-press-line);
+}
+
+.drawer-more {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.drawer-more:hover {
+  color: var(--ink);
 }
 
 .drawer-advanced {
