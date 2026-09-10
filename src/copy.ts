@@ -79,7 +79,6 @@ export const copy = {
     showDebug: '显示调试数据',
     showCollider: '显示碰撞体',
     personSeg: '人像遮挡与碰撞（低档机自动关）',
-    replayGuide: '重看新手引导',
     copyConfig: '复制配置给开发',
     copied: '已复制到剪贴板',
     close: '关闭',
