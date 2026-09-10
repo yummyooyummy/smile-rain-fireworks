@@ -101,9 +101,9 @@ export class Hud {
         </button>
         <button class="icon-btn" id="gearBtn" aria-label="${copy.hud.gear}" title="${copy.hud.gear}">
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2.2" class="knob"/>
-            <line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2.2" class="knob"/>
-            <line x1="4" y1="17" x2="20" y2="17"/><circle cx="11" cy="17" r="2.2" class="knob"/>
+            <line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2.4" class="knob"/>
+            <line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2.4" class="knob"/>
+            <line x1="4" y1="17" x2="20" y2="17"/><circle cx="11" cy="17" r="2.4" class="knob"/>
           </svg>
         </button>
         <button class="icon-btn" id="exitBtn" aria-label="${copy.hud.exit}" title="${copy.hud.exit}">
@@ -266,7 +266,7 @@ export class Hud {
     const img = this.previewWrap.querySelector('img') as HTMLImageElement
     img.addEventListener('load', () => (this.previewWrap.hidden = false))
     img.addEventListener('error', () => (this.previewWrap.hidden = true))
-    img.src = 'preview.png'
+    img.src = 'preview.jpg'
   }
 
   // ---------- 开始页 ----------

@@ -477,7 +477,8 @@ body {
 .icon-btn svg .knob {
   fill: currentColor;
   stroke: var(--ground-2);
-  stroke-width: 2;
+  stroke-width: 3;
+  paint-order: stroke; /* 先画描边再画填充：描边只在圆外面形成一圈底色，把线断开，圆本身完整 */
 }
 
 .icon-btn:active {
@@ -882,9 +883,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0;
-  margin-top: 4px;
-  padding-top: 22px;
-  border-top: 1px solid var(--line);
 }
 
 .drawer-sub {
@@ -999,9 +997,13 @@ body {
 .drawer input[type='range']::-webkit-slider-runnable-track {
   height: 3px;
   border-radius: 999px;
-  background:
-    linear-gradient(var(--grad-slider), var(--grad-slider)) 0 / var(--p, 0%) 100% no-repeat,
-    var(--line);
+  /* --grad-slider 本身就是一个 linear-gradient()，不能再套一层 linear-gradient()——
+     之前那样写整条声明无效，轨道就完全不显示（「进度调了调看不见」的原因）。 */
+  background-image: var(--grad-slider), linear-gradient(var(--line), var(--line));
+  background-size:
+    var(--p, 0%) 100%,
+    100% 100%;
+  background-repeat: no-repeat;
 }
 
 .drawer input[type='range']::-webkit-slider-thumb {

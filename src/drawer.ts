@@ -73,14 +73,7 @@ panel.innerHTML = `
       </button>
     </header>
     <div class="drawer-body">
-      <label class="drawer-switch">
-        <span>${copy.drawer.showGuide}</span>
-        <input type="checkbox" data-toggle="showGuide" />
-      </label>
-      <button type="button" class="btn-ghost drawer-replay" id="drawerReplay">${copy.drawer.replayGuide}</button>
-      <button type="button" class="drawer-more" id="drawerMore">${copy.drawer.advancedLink} ›</button>
-
-      <section class="drawer-advanced" id="drawerAdvanced" hidden>
+      <section class="drawer-advanced" id="drawerAdvanced">
         <h3 class="drawer-sub">${copy.drawer.advancedTitle}</h3>
         <p class="drawer-hint">${copy.drawer.advancedHint}</p>
         ${sliderMarkup}
@@ -107,12 +100,9 @@ document.body.appendChild(panel)
 
 const sheet = panel.querySelector('.drawer-sheet') as HTMLElement
 const handle = panel.querySelector('.drawer-handle') as HTMLElement
-const replayBtn = panel.querySelector('#drawerReplay') as HTMLButtonElement
 const closeBtn = panel.querySelector('#drawerClose') as HTMLButtonElement
 const exportBtn = panel.querySelector('#drawerExport') as HTMLButtonElement
 const feedback = panel.querySelector('#drawerFeedback') as HTMLElement
-const advanced = panel.querySelector('#drawerAdvanced') as HTMLElement
-const moreBtn = panel.querySelector('#drawerMore') as HTMLButtonElement
 
 let open = false
 let feedbackTimer = 0
@@ -143,9 +133,7 @@ function syncFromConfig(): void {
     val.textContent = formatSlider(s.key, n)
     sliderFill(input)
   }
-  const guide = panel.querySelector<HTMLInputElement>('[data-toggle="showGuide"]')
   const debug = panel.querySelector<HTMLInputElement>('[data-toggle="showDebug"]')
-  if (guide) guide.checked = cfg.showGuide
   if (debug) debug.checked = cfg.showDebug
   const seg = panel.querySelector<HTMLInputElement>('[data-toggle="personSeg"]')
   const col = panel.querySelector<HTMLInputElement>('[data-toggle="showCollider"]')
@@ -153,11 +141,7 @@ function syncFromConfig(): void {
   if (col) col.checked = cfg.showCollider
 }
 
-function setOpen(next: boolean, fromPop = false, showAdvanced?: boolean): void {
-  if (showAdvanced !== undefined) {
-    advanced.hidden = !showAdvanced
-    moreBtn.hidden = showAdvanced
-  }
+function setOpen(next: boolean, fromPop = false): void {
   if (open === next) {
     if (next) syncFromConfig()
     return
@@ -228,7 +212,6 @@ panel.addEventListener('input', (e) => {
     return
   }
   const toggle = t.dataset.toggle
-  if (toggle === 'showGuide') patchConfig({ showGuide: t.checked })
   if (toggle === 'showDebug') patchConfig({ showDebug: t.checked })
   if (toggle === 'personSeg') patchConfig({ personSeg: t.checked })
   if (toggle === 'showCollider') patchConfig({ showCollider: t.checked })
@@ -258,23 +241,7 @@ async function exportConfig(): Promise<void> {
 closeBtn.addEventListener('click', () => setOpen(false))
 exportBtn.addEventListener('click', () => void exportConfig())
 
-// detail.advanced：短按设置键 = 基础；长按 = 展开触发阈值
-window.addEventListener('open-drawer', (e) => {
-  const adv = !!(e as CustomEvent<{ advanced?: boolean }>).detail?.advanced
-  if (open && !adv) setOpen(false)
-  else setOpen(true, false, adv)
-})
-
-// 长按设置键是给知道的人的捷径；不知道的人（比如评审）从这一行进
-moreBtn.addEventListener('click', () => {
-  advanced.hidden = false
-  moreBtn.hidden = true
-})
-
-replayBtn.addEventListener('click', () => {
-  window.dispatchEvent(new CustomEvent('replay-guide'))
-  setOpen(false)
-})
+window.addEventListener('open-drawer', () => setOpen(!open))
 
 // 点抽屉外面关闭。齿轮要排除掉，否则「点齿轮关闭」和「点外面关闭」会互相抵消。
 document.addEventListener(
@@ -342,7 +309,7 @@ window.addEventListener('popstate', () => {
 
 function openWhenReady(frames = 0): void {
   if (getFx()) {
-    setOpen(true, false, true)
+    setOpen(true)
     return
   }
   if (frames < 60) requestAnimationFrame(() => openWhenReady(frames + 1))
