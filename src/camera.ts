@@ -21,6 +21,9 @@ export async function startCamera(video: HTMLVideoElement): Promise<MediaStream>
     throw new CameraError_('unsupported')
   }
   let stream: MediaStream
+  let pending: MediaStream | null = null
+  let timedOut = false
+  let timer = 0
   try {
     stream = await Promise.race([
       navigator.mediaDevices.getUserMedia({
@@ -31,10 +34,22 @@ export async function startCamera(video: HTMLVideoElement): Promise<MediaStream>
           frameRate: { ideal: 30, max: 30 },
         },
         audio: false,
+      }).then((s) => {
+        pending = s
+        if (timedOut) {
+          s.getTracks().forEach((t) => t.stop())
+          throw new CameraError_('timeout')
+        }
+        return s
       }),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new CameraError_('timeout')), PERMISSION_TIMEOUT_MS),
-      ),
+      new Promise<never>((_, reject) => {
+        timer = window.setTimeout(() => {
+          timedOut = true
+          pending?.getTracks().forEach((t) => t.stop())
+          pending = null
+          reject(new CameraError_('timeout'))
+        }, PERMISSION_TIMEOUT_MS)
+      }),
     ])
   } catch (e) {
     if (e instanceof CameraError_) throw e
@@ -43,6 +58,8 @@ export async function startCamera(video: HTMLVideoElement): Promise<MediaStream>
     if (name === 'NotFoundError' || name === 'OverconstrainedError')
       throw new CameraError_('unsupported')
     throw new CameraError_('unknown')
+  } finally {
+    clearTimeout(timer)
   }
 
   video.srcObject = stream
