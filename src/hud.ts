@@ -422,14 +422,16 @@ export class Hud {
       }
       const file = new File([blob], 'smile-rain-fireworks.png', { type: 'image/png' })
       const payload = { files: [file], title: copy.hud.shareTitle }
-      try {
-        if (navigator.share && (!navigator.canShare || navigator.canShare(payload))) {
+      if (navigator.share && (!navigator.canShare || navigator.canShare(payload))) {
+        try {
           await navigator.share(payload)
           this.toast(copy.hud.shared)
           return
+        } catch (e) {
+          if (e instanceof DOMException && e.name === 'AbortError') return
+          this.toast(copy.hud.shareFail)
+          return
         }
-      } catch (e) {
-        if (e instanceof DOMException && e.name === 'AbortError') return
       }
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
