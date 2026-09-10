@@ -256,6 +256,7 @@ function exitToStart(): void {
  * 只在有摄像头时启用——手动模式下「没有脸」是常态。
  */
 const IDLE_PAUSE_MS = 60_000
+const NO_FACE_HINT_MS = 3_000
 let noFaceMs = 0
 let idlePaused = false
 
@@ -379,15 +380,13 @@ function loop(now: number): void {
   }
 
   // 7. HUD
+  if (cameraOn) noFaceMs = sig.faceOk ? 0 : noFaceMs + dt * 1000
   updateHud(sig, now)
 
   // 7.5 空闲暂停
-  if (cameraOn) {
-    noFaceMs = sig.faceOk ? 0 : noFaceMs + dt * 1000
-    if (noFaceMs >= IDLE_PAUSE_MS) {
-      pauseFromIdle()
-      return
-    }
+  if (cameraOn && noFaceMs >= IDLE_PAUSE_MS) {
+    pauseFromIdle()
+    return
   }
 
   // 8. 档位
@@ -420,7 +419,7 @@ function updateHud(sig: ReturnType<FaceTracker['sample']>, now: number): void {
 
   // 状态提示
   if (!cameraOn) hud.setStatus(null)
-  else if (!sig.faceOk) hud.setStatus(copy.status.noFace)
+  else if (!sig.faceOk) hud.setStatus(noFaceMs >= NO_FACE_HINT_MS ? copy.status.noFace : null)
   else if (sig.lowConfidence) hud.setStatus(copy.status.lowLight)
   else hud.setStatus(null)
 
