@@ -4,7 +4,11 @@
 粒子落到头上会分裂成更小的火星向四周溅开。**
 纯前端、零服务端、零推理成本，PC 与手机浏览器直接打开。
 
-> 🚧 待补：Live Demo 链接、顶部演示 GIF、性能实测截图、三张架构图。见 `TODO-for-cursor.md`。
+**[Live Demo](#)** ← 换成 Vercel 生产地址。
+
+<img src="docs/demo.gif" alt="15 秒演示：微笑下雨、大笑放烟花、粒子撞头分裂" width="480" />
+
+评审设备打不开摄像头时，以上 GIF 即为交互预览。
 
 ---
 
@@ -24,6 +28,8 @@ MediaPipe Face Landmarker 每帧输出 52 个表情系数（0–1）。取
 | Smiling → Laughing | smile ≥ 0.60 且 jawOpen ≥ 0.35 持续 200 ms |
 | Laughing → Smiling | jawOpen < 0.20 持续 400 ms |
 | 任意 → Idle | 无脸持续 1 s |
+
+![状态图](docs/state-machine.png)
 
 三个设计决策：
 
@@ -77,10 +83,14 @@ camera.ts → face.ts(信号总线) → state.ts(状态机) → particles.ts(发
                               EffectConfig（阈值 / 粒子 / 配色）
 ```
 
+![扩展骨架图](docs/architecture.png)
+
 这条链路的意义是**扩展只加项，不改旧模块**：加「转头让烟花倾斜」只需往 `Signals` 加一个字段；
 加「惊讶 → 闪电」只需加一条规则和一个发射器。
 
 屏幕四层：`<video>`（CSS 镜像）→ `<canvas>` 粒子层（`pointer-events:none`）→ HUD（DOM）→ 调参抽屉。
+
+![分层图](docs/layers.png)
 
 ---
 
@@ -98,7 +108,7 @@ camera.ts → face.ts(信号总线) → state.ts(状态机) → particles.ts(发
 
 ---
 
-## 性能预算
+## 性能预算与实测
 
 | 指标 | 目标 |
 | --- | --- |
@@ -110,6 +120,16 @@ camera.ts → face.ts(信号总线) → state.ts(状态机) → particles.ts(发
 **三档粒子预算**（雨上限 / 每发烟花）：low 250/100 · mid 500/180 · high 800/300。
 启动 2 s 实测帧时间定初档；运行中 EMA 帧时 > 25 ms 持续 3 s 降档，< 14 ms 持续 10 s 升档。
 当前档位在调参抽屉与 `?debug=1` 面板里可见。
+
+### 实测（Chrome Performance，待填）
+
+| 场景 | 主线程单帧 | 检测均摊 | 粒子更新 + 绘制 | 稳态 FPS | 档位 |
+| --- | --- | --- | --- | --- | --- |
+| PC · Idle | | | | | |
+| PC · 下雨 + 烟花 | | | | | |
+| 中端手机 · 下雨 + 烟花 | | | | | |
+
+![Chrome Performance 面板](docs/perf.png)
 
 ---
 
@@ -168,6 +188,7 @@ src/
   state.ts       三态状态机 + Laughing 内部爆发事件
   particles.ts   Float32Array 粒子池、雨/烟花发射器、椭圆碰撞
   hud.ts         开始页、引导、状态提示、手动触发、错误页、调试面板
+  drawer.ts      高级模式抽屉：滑块调参、导出 effect.json
   config.ts      EffectConfig、档位表、URL 参数
   copy.ts        全部 UI 文案
 scripts/
