@@ -8,3 +8,6 @@ dist
 public/wasm
 public/models
 vite.config.ts.timestamp-*
+
+# Claude/Cursor 输出目录，不纳入仓库
+Claude outputs/
