@@ -145,14 +145,40 @@ function resize(): void {
 }
 
 /** 分割按档位开关：high 每 4 帧（≈15 Hz），mid 每 6 帧（≈10 Hz），low 关。 */
+/**
+ * 分割按档位开关，但关的时候有 5 s 宽限：手机帧时在降档线附近晃时，档位会在 mid / low
+ * 之间来回跳，每跳一次分割就关一次、抠出来的人像层就藏一次——雨瞬间跑到人前面，
+ * 回来又到身后。「偶尔在前面、有时又闪到后面」就是这个，不是遮罩滞后。
+ */
+const SEG_OFF_GRACE_MS = 5000
+let segOffSince = 0
+
 function applySegTier(): void {
-  const want = cameraOn && flags.seg && cfg.personSeg && tier.name !== 'low'
+  const hardOff = !cameraOn || !flags.seg || !cfg.personSeg
+  const tierOff = tier.name === 'low'
+  const want = !hardOff && !tierOff
   segEvery = tier.name === 'high' ? 4 : 6
-  if (want && !segOn) {
-    segOn = true
-    void person.init()
-  } else if (!want && segOn) {
+  if (want) {
+    segOffSince = 0
+    if (!segOn) {
+      segOn = true
+      void person.init()
+    }
+  } else if (segOn) {
+    if (hardOff) {
+      segOn = false
+      segOffSince = 0
+      person.stop()
+    } else if (!segOffSince) {
+      segOffSince = performance.now() // 只是档位掉了：先记时间，宽限期内不关
+    }
+  }
+}
+
+function tickSegGrace(now: number): void {
+  if (segOn && segOffSince && now - segOffSince > SEG_OFF_GRACE_MS) {
     segOn = false
+    segOffSince = 0
     person.stop()
   }
 }
@@ -349,6 +375,7 @@ function loop(now: number): void {
     face.detect(video, w, h)
   }
   if (segOn && frame % segEvery === 0) person.request(video, now)
+  tickSegGrace(now)
 
   // 2. 信号采样（含 EMA 平滑与头部插值）
   const sig = face.sample(dt)
@@ -429,6 +456,7 @@ function updateHud(sig: ReturnType<FaceTracker['sample']>, now: number): void {
         `detect    ${face.lastDetectMs.toFixed(1)}ms (${face.delegate}, 每 ${DETECT_EVERY} 帧)`,
         `assets    ${face.assetSource}   headRot ${face.headRotDeg.toFixed(1)}°`,
         `person    ${segOn ? (person.active ? `on ${person.lastMs.toFixed(0)}ms (${person.delegate}, 每 ${segEvery} 帧) ${person.mw}x${person.mh}` : person.ready ? 'ready' : person.lastError ? `fail ${person.lastError}` : 'loading') : person.lastError ? `fail ${person.lastError}` : 'off'}`,
+        `occlude   ${segOn && person.active ? 'mask' : cameraOn ? 'ellipse' : '-'}   maskAge ${person.active ? (now - person.lastMaskAt).toFixed(0) : '-'}ms   segHz ${person.hz.toFixed(1)}${segOffSince ? '   (宽限中)' : ''}`,
         `tier      ${tier.name}   rain ${s.rainAlive}   spark ${s.sparkAlive}   rocket ${s.rocketAlive}`,
         `collide   ${s.collisions}/frame`,
       ].join('\n'),

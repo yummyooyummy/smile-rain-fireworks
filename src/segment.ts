@@ -43,6 +43,8 @@ export class PersonMask implements PersonCollider {
   ready = false
   delegate: 'GPU' | 'CPU' | '-' = '-'
   lastMs = 0
+  lastMaskAt = 0
+  hz = 0
   lastError = ''
   private busy = false
 
@@ -90,6 +92,9 @@ export class PersonMask implements PersonCollider {
       this.mw = m.w as number
       this.mh = m.h as number
       this.lastMs = m.ms as number
+      const t = performance.now()
+      if (this.lastMaskAt) this.hz += (1000 / Math.max(1, t - this.lastMaskAt) - this.hz) * 0.2
+      this.lastMaskAt = t
       this.detectPolarity()
       this.updateCssMask()
     } else if (m.type === 'skip') {
@@ -304,6 +309,8 @@ export class PersonMask implements PersonCollider {
     this.ready = false
     this.busy = false
     this.data = null
+    this.lastMaskAt = 0
+    this.hz = 0
     this.clone.hidden = true
     this.clone.style.maskImage = ''
     this.clone.style.webkitMaskImage = ''

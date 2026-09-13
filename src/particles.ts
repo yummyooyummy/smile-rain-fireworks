@@ -384,13 +384,27 @@ export class Effects {
     let x: number
     let targetY: number
     if (head) {
-      // 整个背景均匀升空（Yuqing 决定，不再只在脸两侧）；炸点高度仍参照头：
-      // 落在头顶上方 0.6–1.8 倍头高处，粒子飘落时才会经过头部。
-      x = this.w * (0.1 + Math.random() * 0.8)
-      // 炸点离头远一点：太近的话炸开瞬间整片粒子一起砸在头上，碰撞密得像下冰雹。
-      // 远了之后只有飘落的那部分会经过头，稀疏、可辨认。
-      targetY = Math.max(this.h * 0.06, head.cy - head.ry * (1.6 + Math.random() * 1.6))
-      if (Math.abs(x - head.cx) < head.rx * 1.6) targetY = Math.min(targetY, head.cy - head.ry * 3.2)
+      // 炸点落在环绕头部的一段椭圆弧上：正上方最高、两侧渐低（Yuqing 的示意图）。
+      // 弧的半径按头的尺寸取，再被屏幕封顶；封顶时要扣掉炸开后的展开半径——
+      // 「炸点在屏幕内」不等于「炸开后在屏幕内」。头贴近顶部时正上方没地方，炸点让到两侧。
+      const spread = 150 * this.cfg.burstScale * scale // 0.5 s 内的展开半径（与 SPARK_K / 初速对应）
+      const marginX = spread * 0.9
+      const marginY = spread * 0.8
+      const arcRx = Math.min(head.rx * 4.2, Math.max(head.rx * 1.6, Math.min(head.cx, this.w - head.cx) - marginX))
+      const arcRy = Math.min(head.ry * 3.0, Math.max(head.ry * 1.2, head.cy - marginY))
+      const topBlocked = head.cy - head.ry * 3.0 < marginY
+      // θ 从 +x 轴逆时针量，上半圆 25°–155°；顶部没空间就只用两侧 25°–65° / 115°–155°
+      let th: number
+      if (topBlocked) {
+        th = (Math.random() < 0.5 ? 25 : 115) + Math.random() * 40
+      } else {
+        th = 25 + Math.random() * 130
+      }
+      const rad = (th * Math.PI) / 180
+      x = head.cx + arcRx * Math.cos(rad)
+      targetY = head.cy - arcRy * Math.sin(rad)
+      x = Math.min(this.w - marginX, Math.max(marginX, x))
+      targetY = Math.max(marginY, Math.min(head.cy - head.ry * 0.3, targetY))
     } else {
       x = this.w * (0.12 + Math.random() * 0.76)
       targetY = this.h * (0.12 + Math.random() * 0.26) * (scale < 0.6 ? 1.5 : 1)
