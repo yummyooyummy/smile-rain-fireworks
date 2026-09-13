@@ -6,12 +6,14 @@
 
 **[Live Demo → smile.kkyq.hk.cn](https://smile.kkyq.hk.cn)**（国内直连；备用地址 [smile-rain-fireworks.vercel.app](https://smile-rain-fireworks.vercel.app)）
 
+<!-- 截图占位：把 shot-1..4.png 放进 docs/ 后，把下面这段注释换成图片表格。
+     GitHub 对指向不存在文件的 <img> 会渲染成破图，所以文件到位前不放图片标签。
 | 待机 | 微笑 · 下雨 | 大笑 · 烟花撞头 | 打开「显示碰撞体」 |
 | --- | --- | --- | --- |
-| <img src="docs/shot-1.png" width="180" alt="待机" /> | <img src="docs/shot-2.png" width="180" alt="微笑时下雨" /> | <img src="docs/shot-3.png" width="180" alt="大笑时烟花，粒子撞到头上弹开" /> | <img src="docs/shot-4.png" width="180" alt="人像遮罩即碰撞体" /> |
+| <img src="docs/shot-1.png" width="180" /> | <img src="docs/shot-2.png" width="180" /> | <img src="docs/shot-3.png" width="180" /> | <img src="docs/shot-4.png" width="180" /> |
+-->
 
-评审设备打不开摄像头时，以上截图即为交互预览；最后一张是把碰撞体显示出来的样子——
-粒子撞的是像素级的人像轮廓，不是一个圆圈。
+_交互截图待补（`docs/shot-1..4.png`）。_ 评审设备打不开摄像头时，右下角圆钮点一下下雨、长按放烟花。
 
 ---
 
@@ -153,7 +155,7 @@ camera.ts → face.ts(信号总线) → state.ts(状态机) → particles.ts(发
 **三档粒子预算**（雨上限 / 每发烟花）：low 250/140 · mid 500/280 · high 800/460。
 启动 2 s 实测帧时间定初档；运行中 EMA 帧时 > 25 ms 持续 3 s 降档，< 14 ms 持续 5 s 升档（单帧 > 80 ms 的
 shader 编译尖峰不计入 EMA——它一帧就能把一台 247 fps 的电脑误判成低档机）。
-当前档位在调参抽屉与 `?debug=1` 面板里可见。
+当前档位在 `?debug=1` 面板里可见。
 
 ### 实测（待填）
 
@@ -219,8 +221,16 @@ npm run dev      # 自动准备 wasm 与模型到 public/
 把 MediaPipe 的 wasm 从 `node_modules` 复制到 `public/wasm/`，并下载模型到 `public/models/`。
 下载失败也不会中断构建，运行时会自动回退到官方 CDN（`?debug=1` 面板的 `assets` 一行显示当前来源）。
 
-调试参数：`?debug=1` 调试面板 · `?mode=pro` 打开调参抽屉 ·
-`?mode=clean` 隐藏齿轮与引导 · `?cfg=<base64>` 覆盖配置。
+**设置面板**（右上角滑杆图标）是面向玩家的：六条词化控件（微笑 / 大笑灵敏度、雨量、
+烟花大小 / 密度、撞头弹跳）+ 四个配色预设 + 「雨落在身后」开关，滑杆中点恒等于默认值。
+**碰撞体可视化、调试数据、导出配置在面板底部的「高级设置」折叠区里**，或直接用 `?mode=pro` 打开时自动展开。
+
+调试参数：`?debug=1` 调试面板 · `?mode=pro` 打开设置面板并展开高级设置 ·
+`?mode=clean` 隐藏全部 UI · `?seg=0` 关掉人像分割 · `?tier=low|mid|high` 钉住性能档位 ·
+`?cfg=<base64>` 覆盖配置。
+
+「显示碰撞体」在人像分割开启时显示的就是**分割遮罩本身**（抠出来的人染成青色）——
+遮罩即碰撞体，两者是同一个东西；分割关闭时显示的是头部椭圆。诊断遮罩滞后用它即可。
 
 键盘快捷键：**D 随时开关调试面板**、1 下雨、2 放烟花。
 调试面板打开且没有摄像头时，指针位置就是一颗虚拟的头——不必对着镜头就能验证碰撞与分裂。
