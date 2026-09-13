@@ -51,7 +51,7 @@ export const DEFAULT_CONFIG: EffectConfig = {
 export const CONTROLS = [
   { key: 'smileEnter', left: 0.5, mid: 0.3, right: 0.15, step: 0.01 },
   { key: 'laughJaw', left: 0.3, mid: 0.15, right: 0.08, step: 0.01 },
-  { key: 'rainMax', left: 0.3, mid: 0.65, right: 1, step: 0.05 },
+  { key: 'rainMax', left: 0.4, mid: 1, right: 1.6, step: 0.05 },
   { key: 'burstScale', left: 1, mid: 1.75, right: 2.5, step: 0.05 },
   { key: 'fireworkCount', left: 300, mid: 600, right: 900, step: 10 },
   { key: 'restitution', left: 0.6, mid: 0.8, right: 1, step: 0.05 },
