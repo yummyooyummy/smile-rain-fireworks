@@ -49,6 +49,9 @@ export class ExpressionState {
   /** 两根进度条：「离微笑触发还差多少」「离大笑触发还差多少」，各自独立 */
   smileProgress = 0
   laughProgress = 0
+  /** 进度条语义：charge = 触发进度；active = 已触发（标签「下雨中 / 烟花中」）；dim = 被更高优先级的意图压住 */
+  smileStatus: 'charge' | 'active' | 'dim' = 'charge'
+  laughStatus: 'charge' | 'active' = 'charge'
   private tSmileHold = 0
 
   /** 里程碑：给引导文案判断走到第几步 */
@@ -240,7 +243,12 @@ export class ExpressionState {
     this.rainRate += Math.abs(diff) <= speed ? diff : Math.sign(diff) * speed
 
     // ---- 两根进度条：各自独立，互不清零 ----
+    // 两根条永远表示「触发进度」，触发之后变成状态标签；不把雨量混作进度。
+    // 大笑候选真正成立（两个条件都满足、正在计时）时才压掉微笑条——一张嘴就压会让界面跟着说话跳。
+    const candidate = this.mode !== 'laughing' && this.isLaughing(sig)
     this.smileProgress = this.mode !== 'idle' ? 1 : Math.min(1, sig.smile / c.smileEnter)
+    this.smileStatus = this.mode === 'laughing' || candidate ? 'dim' : this.mode === 'smiling' ? 'active' : 'charge'
+    this.laughStatus = this.mode === 'laughing' ? 'active' : 'charge'
     // 大笑条 = 判定条件本身：条满 ⇔ 再保持 150 ms 就放烟花。
     // 早期版本条只看张嘴、判定却还要 smile ≥ 0.60，于是出现「大笑条满了却不放烟花」。
     this.laughProgress = this.mode === 'laughing' ? 1 : this.laughGate(sig)

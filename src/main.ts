@@ -422,19 +422,21 @@ function updateHud(sig: ReturnType<FaceTracker['sample']>, now: number): void {
   // 引导三步 → 走完只留两根进度条（各自独立，互不清零）
   const sp = state.smileProgress
   const lp = state.laughProgress
+  const ss = state.smileStatus
+  const ls = state.laughStatus
   if (!cfg.showGuide || flags.clean || !cameraOn) {
     hud.setGuide(null, 0, 0)
   } else if (guideDone) {
-    hud.setGuide('', sp, lp)
+    hud.setGuide('', sp, lp, ss, ls)
   } else if (!state.reachedSmile) {
-    hud.setGuide(copy.guide.step1, sp, lp)
+    hud.setGuide(copy.guide.step1, sp, lp, ss, ls)
   } else if (!state.reachedLaugh) {
-    hud.setGuide(copy.guide.step2, sp, lp)
+    hud.setGuide(copy.guide.step2, sp, lp, ss, ls)
   } else if (!state.reachedCollision) {
-    hud.setGuide(copy.guide.step3, sp, lp)
+    hud.setGuide(copy.guide.step3, sp, lp, ss, ls)
   } else {
     if (!guideDoneAt) guideDoneAt = now
-    hud.setGuide(copy.guide.done, sp, lp)
+    hud.setGuide(copy.guide.done, sp, lp, ss, ls)
     if (now - guideDoneAt > 2000) guideDone = true
   }
 
