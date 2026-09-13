@@ -1,13 +1,13 @@
 {
-  "smileEnter": 0.45,
-  "smileExit": 0.3,
-  "laughSmile": 0.6,
-  "laughJaw": 0.35,
-  "laughExitJaw": 0.2,
+  "smileEnter": 0.3,
+  "laughJaw": 0.15,
   "rainMax": 1,
-  "fireworkCount": 180,
-  "restitution": 0.65,
+  "fireworkCount": 600,
+  "restitution": 0.8,
+  "burstScale": 1.75,
   "hueShift": 0,
+  "personSeg": true,
+  "showCollider": false,
   "showGuide": true,
   "showDebug": false
 }

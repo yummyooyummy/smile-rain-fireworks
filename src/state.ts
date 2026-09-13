@@ -14,6 +14,11 @@ import type { Signals } from './face'
 export type Mode = 'idle' | 'smiling' | 'laughing'
 
 /** 阈值判定的持续时间。注释里的帧数按 20 Hz 检测频率折算。 */
+// 退出阈值由进入阈值派生，永远比它低：用户怎么拖滑杆，迟滞都在，
+// 不会出现「进 0.30 / 出 0.30」这种没有迟滞、临界处反复切换的组合。
+const SMILE_EXIT_RATIO = 0.7
+const LAUGH_EXIT_RATIO = 0.6
+
 const HOLD_SMILE_ENTER = 300 // ≈6 检测帧
 const HOLD_SMILE_EXIT = 500 // ≈10 检测帧
 const HOLD_LAUGH_ENTER = 150 // ≈3 检测帧；大笑要比微笑先被判出来，否则「突然大笑」会先下雨
@@ -53,6 +58,14 @@ export class ExpressionState {
   smileStatus: 'charge' | 'active' | 'dim' = 'charge'
   laughStatus: 'charge' | 'active' = 'charge'
   private tSmileHold = 0
+
+  private get smileExit(): number {
+    return this.cfg.smileEnter * SMILE_EXIT_RATIO
+  }
+
+  private get laughExitJaw(): number {
+    return this.cfg.laughJaw * LAUGH_EXIT_RATIO
+  }
   /** 窄屏：一次只放一枚主烟花，靠节奏而不是数量——手机上人占画面大，三枚齐发会盖住脸 */
   private compact = false
 
@@ -178,7 +191,7 @@ export class ExpressionState {
         }
 
         case 'smiling': {
-          this.tSmileExit = sig.smile < c.smileExit ? this.tSmileExit + ms : 0
+          this.tSmileExit = sig.smile < this.smileExit ? this.tSmileExit + ms : 0
           if (this.tSmileExit >= HOLD_SMILE_EXIT) {
             this.mode = 'idle'
             this.tSmileExit = 0
@@ -193,7 +206,7 @@ export class ExpressionState {
         }
 
         case 'laughing':
-          this.tLaughExit = sig.jawOpen < c.laughExitJaw ? this.tLaughExit + ms : 0
+          this.tLaughExit = sig.jawOpen < this.laughExitJaw ? this.tLaughExit + ms : 0
           if (this.tLaughExit >= HOLD_LAUGH_EXIT) {
             this.leaveLaughing()
             this.mode = 'smiling'
@@ -241,7 +254,7 @@ export class ExpressionState {
         : active
           ? this.manualRain > 0
             ? 0.7
-            : smoothstep(c.smileExit, 0.8, sig.smile) * 0.95 + 0.05
+            : smoothstep(this.smileExit, 0.8, sig.smile) * 0.95 + 0.05
           : 0
     const outSpeed = this.mode === 'laughing' ? dt / RAIN_CUT_OUT : dt / RAIN_FADE_OUT
     const speed = target > this.rainRate ? dt / RAIN_FADE_IN : outSpeed
@@ -261,17 +274,17 @@ export class ExpressionState {
   }
 
   /**
-   * 大笑 = 嘴张到位（jawOpen ≥ laughJaw）且至少在笑（smile ≥ smileExit，这个门槛很低，
+   * 大笑 = 嘴张到位（jawOpen ≥ laughJaw）且至少在笑（smile ≥ 进入阈值的 70%，这个门槛很低，
    * 只用来排除打哈欠和说话）。不再要求 smile ≥ 0.60——那条让「大笑」变成了「先笑得很开再张嘴」。
    */
   private isLaughing(sig: Signals): boolean {
-    return sig.jawOpen >= this.cfg.laughJaw && sig.smile >= this.cfg.smileExit
+    return sig.jawOpen >= this.cfg.laughJaw && sig.smile >= this.smileExit
   }
 
   /** 0–1，两个条件的最小值：任何一个不满足，条就不满 */
   private laughGate(sig: Signals): number {
     const c = this.cfg
-    return Math.min(1, sig.jawOpen / c.laughJaw, sig.smile / c.smileExit)
+    return Math.min(1, sig.jawOpen / c.laughJaw, sig.smile / this.smileExit)
   }
 
   private enterLaughing(sig: Signals): void {

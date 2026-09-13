@@ -4,14 +4,8 @@
 export interface EffectConfig {
   /** 进入 Smiling 的微笑阈值 */
   smileEnter: number
-  /** 退出 Smiling 的微笑阈值（必须低于 smileEnter，构成迟滞） */
-  smileExit: number
-  /** 进入 Laughing 的微笑阈值 */
-  laughSmile: number
   /** 进入 Laughing 的张嘴阈值 */
   laughJaw: number
-  /** 退出 Laughing 的张嘴阈值 */
-  laughExitJaw: number
   /** 雨量上限倍率 0–1，最终雨滴数还要乘档位上限 */
   rainMax: number
   /** 单发烟花粒子数基准（实际会按 jawOpen 与档位缩放） */
@@ -33,15 +27,13 @@ export interface EffectConfig {
 }
 
 export const DEFAULT_CONFIG: EffectConfig = {
-  smileEnter: 0.45,
-  smileExit: 0.3,
-  laughSmile: 0.6,
-  laughJaw: 0.35,
-  laughExitJaw: 0.2,
+  // 真机实测手感（Yuqing，2026-09-13）。退出阈值不再单独存：见 state.ts 的 EXIT_RATIO
+  smileEnter: 0.3,
+  laughJaw: 0.15,
   rainMax: 1,
-  fireworkCount: 320,
-  restitution: 0.65,
-  burstScale: 1.25,
+  fireworkCount: 600,
+  restitution: 0.8,
+  burstScale: 1.75,
   hueShift: 0,
   showCollider: false,
   personSeg: true,
@@ -51,12 +43,12 @@ export const DEFAULT_CONFIG: EffectConfig = {
 
 /** 滑块元数据，抽屉 UI 直接读它生成控件 */
 export const SLIDERS = [
-  { key: 'smileEnter', min: 0.3, max: 0.7, step: 0.01 },
-  { key: 'laughJaw', min: 0.15, max: 0.8, step: 0.01 },
+  { key: 'smileEnter', min: 0.15, max: 0.5, step: 0.01 },
+  { key: 'laughJaw', min: 0.08, max: 0.3, step: 0.01 },
   { key: 'rainMax', min: 0, max: 1, step: 0.05 },
-  { key: 'fireworkCount', min: 80, max: 600, step: 10 },
-  { key: 'burstScale', min: 0.6, max: 2, step: 0.05 },
-  { key: 'restitution', min: 0.3, max: 0.9, step: 0.05 },
+  { key: 'fireworkCount', min: 300, max: 900, step: 10 },
+  { key: 'burstScale', min: 1, max: 2.5, step: 0.05 },
+  { key: 'restitution', min: 0.6, max: 1, step: 0.05 },
   { key: 'hueShift', min: -30, max: 30, step: 1 },
 ] as const
 
@@ -103,10 +95,7 @@ export function readFlags(search = location.search): RuntimeFlags {
 
 const CFG_NUM_KEYS = [
   'smileEnter',
-  'smileExit',
-  'laughSmile',
   'laughJaw',
-  'laughExitJaw',
   'rainMax',
   'fireworkCount',
   'restitution',
