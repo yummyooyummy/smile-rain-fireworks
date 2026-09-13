@@ -2,7 +2,15 @@
 //   window 'open-drawer' 打开；window.__fx = { getConfig, setConfig, getTier }
 // 文案全部来自 copy.ts；桌面右侧滑入 ≤320px，手机底部滑入 ≤60vh，无全屏遮罩。
 
-import { SLIDERS, readFlags, type EffectConfig, type SliderKey } from './config'
+import {
+  CONTROLS,
+  PALETTE_PRESETS,
+  posToValue,
+  readFlags,
+  valueToPos,
+  type EffectConfig,
+  type SliderKey,
+} from './config'
 import { copy } from './copy'
 
 interface FxBridge {
@@ -11,54 +19,43 @@ interface FxBridge {
   getTier: () => 'low' | 'mid' | 'high'
 }
 
-function sliderLabel(key: SliderKey): string {
-  switch (key) {
-    case 'smileEnter':
-      return copy.drawer.smileThreshold
-    case 'laughJaw':
-      return copy.drawer.laughThreshold
-    case 'rainMax':
-      return copy.drawer.rainMax
-    case 'fireworkCount':
-      return copy.drawer.fireworkCount
-    case 'burstScale':
-      return copy.drawer.burstScale
-    case 'restitution':
-      return copy.drawer.restitution
-    case 'hueShift':
-      return copy.drawer.hueShift
-  }
+function meta(key: SliderKey) {
+  return CONTROLS.find((c) => c.key === key) as (typeof CONTROLS)[number]
 }
 
 function getFx(): FxBridge | undefined {
   return (window as unknown as { __fx?: FxBridge }).__fx
 }
 
-function parseSlider(key: SliderKey, raw: string): number {
-  const meta = SLIDERS.find((s) => s.key === key)
-  if (!meta) return Number(raw)
-  return meta.step >= 1 ? Number.parseInt(raw, 10) : Number.parseFloat(raw)
-}
-
-function formatSlider(key: SliderKey, n: number): string {
-  const meta = SLIDERS.find((s) => s.key === key)
-  if (!meta || meta.step >= 1) return String(Math.round(n))
-  return n.toFixed(2)
+/** 调试模式下才显示的真实数值 */
+function rawText(key: SliderKey, n: number): string {
+  return meta(key).step >= 1 ? String(Math.round(n)) : n.toFixed(2)
 }
 
 const panel = document.createElement('aside')
 panel.className = 'drawer'
 panel.setAttribute('aria-hidden', 'true')
 
-const sliderMarkup = SLIDERS.map(
-  (s) => `
+const sliderMarkup = CONTROLS.map(
+  (c) => `
     <label class="drawer-field">
       <span class="drawer-field-head">
-        <span>${sliderLabel(s.key)}</span>
-        <span class="drawer-val" data-val="${s.key}"></span>
+        <span>${copy.drawer.controls[c.key].label}</span>
+        <span class="drawer-val" data-val="${c.key}" hidden></span>
       </span>
-      <input type="range" data-slider="${s.key}" min="${s.min}" max="${s.max}" step="${s.step}" />
+      <input type="range" data-slider="${c.key}" min="0" max="100" step="1" />
+      <span class="drawer-ends"><i>${copy.drawer.controls[c.key].min}</i><i>${copy.drawer.controls[c.key].max}</i></span>
     </label>`,
+).join('')
+
+const paletteMarkup = PALETTE_PRESETS.map(
+  (p) => `
+    <button type="button" class="drawer-swatch" data-palette="${p.id}" aria-label="${copy.drawer.palette[p.id]}">
+      <span class="drawer-swatch-dots">
+        ${p.swatch.map((c) => `<i style="background:${c}"></i>`).join('')}
+      </span>
+      <em>${copy.drawer.palette[p.id]}</em>
+    </button>`,
 ).join('')
 
 panel.innerHTML = `
@@ -73,14 +70,23 @@ panel.innerHTML = `
       </button>
     </header>
     <div class="drawer-body">
-      <section class="drawer-advanced" id="drawerAdvanced">
-        <h3 class="drawer-sub">${copy.drawer.advancedTitle}</h3>
-        <p class="drawer-hint">${copy.drawer.advancedHint}</p>
-        ${sliderMarkup}
-        <label class="drawer-switch">
-          <span>${copy.drawer.personSeg}</span>
-          <input type="checkbox" data-toggle="personSeg" />
-        </label>
+      <p class="drawer-hint">${copy.drawer.hint}</p>
+      ${sliderMarkup}
+
+      <div class="drawer-palette">
+        <span class="drawer-sub">${copy.drawer.paletteTitle}</span>
+        <div class="drawer-swatches">${paletteMarkup}</div>
+      </div>
+
+      <label class="drawer-switch">
+        <span>${copy.drawer.personSeg}<em>${copy.drawer.personSegHint}</em></span>
+        <input type="checkbox" data-toggle="personSeg" />
+      </label>
+
+      <button type="button" class="drawer-more" id="drawerMore" aria-expanded="false">
+        ${copy.drawer.advancedTitle}<span aria-hidden="true">›</span>
+      </button>
+      <section class="drawer-advanced" id="drawerAdvanced" hidden>
         <label class="drawer-switch">
           <span>${copy.drawer.showCollider}</span>
           <input type="checkbox" data-toggle="showCollider" />
@@ -103,6 +109,8 @@ const handle = panel.querySelector('.drawer-handle') as HTMLElement
 const closeBtn = panel.querySelector('#drawerClose') as HTMLButtonElement
 const exportBtn = panel.querySelector('#drawerExport') as HTMLButtonElement
 const feedback = panel.querySelector('#drawerFeedback') as HTMLElement
+const moreBtn = panel.querySelector('#drawerMore') as HTMLButtonElement
+const advanced = panel.querySelector('#drawerAdvanced') as HTMLElement
 
 let open = false
 let feedbackTimer = 0
@@ -124,21 +132,35 @@ function syncFromConfig(): void {
   const fx = getFx()
   if (!fx) return
   const cfg = fx.getConfig()
-  for (const s of SLIDERS) {
-    const input = panel.querySelector<HTMLInputElement>(`[data-slider="${s.key}"]`)
-    const val = panel.querySelector<HTMLElement>(`[data-val="${s.key}"]`)
+  for (const c of CONTROLS) {
+    const input = panel.querySelector<HTMLInputElement>(`[data-slider="${c.key}"]`)
+    const val = panel.querySelector<HTMLElement>(`[data-val="${c.key}"]`)
     if (!input || !val) continue
-    const n = cfg[s.key]
-    input.value = String(n)
-    val.textContent = formatSlider(s.key, n)
+    input.value = String(Math.round(valueToPos(c, cfg[c.key])))
+    val.hidden = !cfg.showDebug
+    val.textContent = rawText(c.key, cfg[c.key])
     sliderFill(input)
   }
+  // 配色：取色相最接近的那个预设
+  let best: (typeof PALETTE_PRESETS)[number] = PALETTE_PRESETS[0]
+  for (const p of PALETTE_PRESETS) {
+    if (Math.abs(p.hue - cfg.hueShift) < Math.abs(best.hue - cfg.hueShift)) best = p
+  }
+  for (const btn of panel.querySelectorAll<HTMLElement>('[data-palette]')) {
+    btn.classList.toggle('is-on', btn.dataset.palette === best.id)
+  }
   const debug = panel.querySelector<HTMLInputElement>('[data-toggle="showDebug"]')
-  if (debug) debug.checked = cfg.showDebug
   const seg = panel.querySelector<HTMLInputElement>('[data-toggle="personSeg"]')
   const col = panel.querySelector<HTMLInputElement>('[data-toggle="showCollider"]')
+  if (debug) debug.checked = cfg.showDebug
   if (seg) seg.checked = cfg.personSeg
   if (col) col.checked = cfg.showCollider
+}
+
+function setAdvanced(on: boolean): void {
+  advanced.hidden = !on
+  moreBtn.setAttribute('aria-expanded', on ? 'true' : 'false')
+  moreBtn.classList.toggle('is-open', on)
 }
 
 function setOpen(next: boolean, fromPop = false): void {
@@ -196,9 +218,12 @@ function patchConfig(partial: Partial<EffectConfig>): void {
   if (!fx) return
   fx.setConfig({ ...fx.getConfig(), ...partial })
   const cfg = fx.getConfig()
-  for (const s of SLIDERS) {
-    const val = panel.querySelector<HTMLElement>(`[data-val="${s.key}"]`)
-    if (val) val.textContent = formatSlider(s.key, cfg[s.key])
+  for (const c of CONTROLS) {
+    const val = panel.querySelector<HTMLElement>(`[data-val="${c.key}"]`)
+    if (val) {
+      val.hidden = !cfg.showDebug
+      val.textContent = rawText(c.key, cfg[c.key])
+    }
   }
 }
 
@@ -207,7 +232,7 @@ panel.addEventListener('input', (e) => {
   if (!(t instanceof HTMLInputElement)) return
   const slider = t.dataset.slider as SliderKey | undefined
   if (slider) {
-    patchConfig({ [slider]: parseSlider(slider, t.value) })
+    patchConfig({ [slider]: posToValue(meta(slider), Number(t.value)) })
     sliderFill(t)
     return
   }
@@ -237,6 +262,21 @@ async function exportConfig(): Promise<void> {
   if (feedbackTimer) window.clearTimeout(feedbackTimer)
   feedbackTimer = window.setTimeout(() => (feedback.hidden = true), 2000)
 }
+
+moreBtn.addEventListener('click', () => setAdvanced(advanced.hidden))
+
+panel.addEventListener('click', (e) => {
+  const t = e.target
+  if (!(t instanceof Element)) return
+  const sw = t.closest<HTMLElement>('[data-palette]')
+  if (!sw) return
+  const preset = PALETTE_PRESETS.find((p) => p.id === sw.dataset.palette)
+  if (!preset) return
+  patchConfig({ hueShift: preset.hue })
+  for (const btn of panel.querySelectorAll<HTMLElement>('[data-palette]')) {
+    btn.classList.toggle('is-on', btn === sw)
+  }
+})
 
 closeBtn.addEventListener('click', () => setOpen(false))
 exportBtn.addEventListener('click', () => void exportConfig())
@@ -309,6 +349,7 @@ window.addEventListener('popstate', () => {
 
 function openWhenReady(frames = 0): void {
   if (getFx()) {
+    setAdvanced(true) // ?mode=pro 是给开发/运营的入口，直接展开高级设置
     setOpen(true)
     return
   }

@@ -515,6 +515,111 @@ body {
   display: none !important;
 }
 
+/* ---------- 设置面板：面向玩家的控件 ---------- */
+
+.drawer-ends {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.drawer-ends i {
+  font-style: normal;
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.drawer-switch span em {
+  display: block;
+  margin-top: 2px;
+  font-style: normal;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.drawer-palette {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.drawer-swatches {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.drawer-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 4px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: rgba(245, 237, 230, 0.05);
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.drawer-swatch.is-on {
+  border-color: var(--gold);
+  background: rgba(233, 185, 90, 0.12);
+  color: var(--ink);
+}
+
+.drawer-swatch-dots {
+  display: flex;
+  gap: 3px;
+}
+
+.drawer-swatch-dots i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.drawer-swatch em {
+  font-style: normal;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.drawer-swatch:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.drawer-more {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 4px;
+  padding: 12px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.drawer-more span {
+  transition: transform 0.2s ease;
+}
+
+.drawer-more.is-open span {
+  transform: rotate(90deg);
+}
+
+.drawer-more:hover {
+  color: var(--ink);
+}
+
 /* ---------- 一次性提示 ---------- */
 
 .toast {
