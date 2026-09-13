@@ -53,6 +53,8 @@ export class ExpressionState {
   smileStatus: 'charge' | 'active' | 'dim' = 'charge'
   laughStatus: 'charge' | 'active' = 'charge'
   private tSmileHold = 0
+  /** 窄屏：一次只放一枚主烟花，靠节奏而不是数量——手机上人占画面大，三枚齐发会盖住脸 */
+  private compact = false
 
   /** 里程碑：给引导文案判断走到第几步 */
   reachedSmile = false
@@ -112,8 +114,12 @@ export class ExpressionState {
     this.manualRain = Math.max(this.manualRain, seconds)
   }
 
+  setCompact(on: boolean): void {
+    this.compact = on
+  }
+
   forceBurst(): void {
-    this.burstCount += 2
+    this.burstCount += this.compact ? 1 : 2
     this.burstPower = 0.75
     this.burstScale = 1
   }
@@ -203,7 +209,7 @@ export class ExpressionState {
       this.burstCooldown -= dt
       this.smallBurstTimer -= dt
       if (this.burstCooldown <= 0) {
-        this.emit(sig.jawOpen, 1, 2)
+        this.emit(sig.jawOpen, 1, this.compact ? 1 : 2)
         this.burstCooldown = BURST_COOLDOWN
         this.smallBurstTimer = SMALL_BURST_EVERY
       } else if (this.smallBurstTimer <= 0) {
@@ -273,7 +279,7 @@ export class ExpressionState {
     this.reachedLaugh = true
     this.tLaughEnter = 0
     this.residue = 0
-    this.emit(sig.jawOpen, 1, 3)
+    this.emit(sig.jawOpen, 1, this.compact ? 1 : 3)
     this.burstCooldown = BURST_COOLDOWN
     this.smallBurstTimer = SMALL_BURST_EVERY
   }

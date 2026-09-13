@@ -41,6 +41,10 @@ const RAIN_STREAK = 0.032 // 拖尾长度 = 速度 × 这个系数
 // 雨的尺寸按屏幕短边缩放：同样 2.6px 粗、30px 长的雨丝，在 1440 宽的桌面上是雨，
 // 在 390 宽的手机上像一根根牙签。不做两套参数，做一个连续的缩放系数。
 const RAIN_REF_SIZE = 820
+const RAIN_MIN_WIDTH = 1.2 // CSS 像素（画布已按 DPR 缩放，这里就是屏幕上看到的粗细）
+const RAIN_MIN_LEN = 10
+const COMPACT_EDGE = 500 // 短边小于它算窄屏
+const BURST_REF_SPREAD = 260 // 「参考展开半径」：粒子数按 (实际展开/它)² 缩放
 const RAIN_LAYER_WEIGHT = [0.5, 0.32, 0.18] // 远层最多，近层最少
 
 const GRAVITY = 300 // px/s²（比真实重力慢，粒子才有时间飘落到人身上再碰撞）
@@ -160,6 +164,7 @@ export class Effects {
   private kpower = new Float32Array(MAX_ROCKETS)
   private kscale = new Float32Array(MAX_ROCKETS)
   private kcolor = new Uint8Array(MAX_ROCKETS)
+  private kspread = new Float32Array(MAX_ROCKETS)
   private khx = new Float32Array(MAX_ROCKETS * ROCKET_TRAIL)
   private khy = new Float32Array(MAX_ROCKETS * ROCKET_TRAIL)
   private khn = new Uint8Array(MAX_ROCKETS)
@@ -207,13 +212,22 @@ export class Effects {
   // ---------- 生命周期 ----------
 
   private dpr = 1
+  /** 雨的尺寸系数（线宽、长度）与运动系数（速度、漂移）分开：一起压会让雨在手机上变成牙签 */
   private rainK = 1
+  private rainMoveK = 1
+  private alphaK = 1
+  compact = false
 
   resize(w: number, h: number, dpr: number): void {
     this.w = w
     this.h = h
     this.dpr = dpr
-    this.rainK = Math.min(1, Math.max(0.45, Math.min(w, h) / RAIN_REF_SIZE))
+    const edge = Math.min(w, h)
+    this.rainK = Math.min(1, Math.max(0.45, edge / RAIN_REF_SIZE))
+    this.rainMoveK = Math.min(1, Math.max(0.7, edge / RAIN_REF_SIZE))
+    this.alphaK = edge < COMPACT_EDGE ? 1.2 : 1
+    this.compact = edge < COMPACT_EDGE
+    this.applyPalette(true)
     this.fit(this.ctx)
     if (this.rainCtx) this.fit(this.rainCtx)
   }
@@ -314,8 +328,8 @@ export class Effects {
     this.sparkCursor = 0
   }
 
-  private applyPalette(): void {
-    if (this.appliedHue === this.cfg.hueShift) return
+  private applyPalette(force = false): void {
+    if (!force && this.appliedHue === this.cfg.hueShift) return
     this.appliedHue = this.cfg.hueShift
     for (let i = 0; i < PALETTE.length; i++) {
       rotateHue(PALETTE[i], this.cfg.hueShift, this.palette, i * 3)
@@ -329,7 +343,9 @@ export class Effects {
     const rg = this.rainColor[1] | 0
     const rb = this.rainColor[2] | 0
     for (let layer = 0; layer < 3; layer++) {
-      this.rainStroke[layer] = 'rgba(' + rr + ',' + rg + ',' + rb + ',' + RAIN_ALPHA[layer] + ')'
+      // 窄屏上雨本来就少（人占画面大、雨又在人身后），近层优先提亮
+      const a = Math.min(0.95, RAIN_ALPHA[layer] * (layer === 0 ? this.alphaK : this.alphaK * 1.05))
+      this.rainStroke[layer] = 'rgba(' + rr + ',' + rg + ',' + rb + ',' + a.toFixed(3) + ')'
     }
     this.buildGlow()
   }
@@ -383,11 +399,17 @@ export class Effects {
     const y0 = this.h + 12
     let x: number
     let targetY: number
+    let spreadOut = BURST_REF_SPREAD * this.cfg.burstScale * scale
     if (head) {
       // 炸点落在环绕头部的一段椭圆弧上：正上方最高、两侧渐低（Yuqing 的示意图）。
       // 弧的半径按头的尺寸取，再被屏幕封顶；封顶时要扣掉炸开后的展开半径——
       // 「炸点在屏幕内」不等于「炸开后在屏幕内」。头贴近顶部时正上方没地方，炸点让到两侧。
-      const spread = 150 * this.cfg.burstScale * scale // 0.5 s 内的展开半径（与 SPARK_K / 初速对应）
+      // 想要的展开半径 vs 画面给得起的。窄屏（人占比大）自然只剩小的，烟花跟着变小，
+      // 而不是照着桌面尺寸炸出屏幕。
+      const wantSpread = BURST_REF_SPREAD * this.cfg.burstScale * scale
+      const roomX = Math.min(head.cx, this.w - head.cx) * 0.85
+      const roomY = Math.max(60, head.cy - head.ry * 0.3) * 0.9
+      const spread = Math.max(70, Math.min(wantSpread, roomX, roomY))
       const marginX = spread * 0.9
       const marginY = spread * 0.8
       const arcRx = Math.min(head.rx * 4.2, Math.max(head.rx * 1.6, Math.min(head.cx, this.w - head.cx) - marginX))
@@ -405,9 +427,11 @@ export class Effects {
       targetY = head.cy - arcRy * Math.sin(rad)
       x = Math.min(this.w - marginX, Math.max(marginX, x))
       targetY = Math.max(marginY, Math.min(head.cy - head.ry * 0.3, targetY))
+      spreadOut = spread
     } else {
       x = this.w * (0.12 + Math.random() * 0.76)
       targetY = this.h * (0.12 + Math.random() * 0.26) * (scale < 0.6 ? 1.5 : 1)
+      spreadOut = Math.max(70, Math.min(BURST_REF_SPREAD * this.cfg.burstScale * scale, this.w * 0.42, targetY * 0.9))
     }
     const riseTime = (0.5 + Math.random() * 0.22) * (scale < 0.6 ? 0.75 : 1)
     const d = y0 - targetY
@@ -423,6 +447,7 @@ export class Effects {
     this.kpower[idx] = power
     this.kscale[idx] = scale
     this.kcolor[idx] = (Math.random() * PALETTE.length) | 0
+    this.kspread[idx] = spreadOut
     this.khn[idx] = 0
     this.khi[idx] = 0
   }
@@ -443,11 +468,14 @@ export class Effects {
   }
 
   /** 在指定位置直接炸开（升空到顶点后由 update 调用；也可单独用于调试） */
-  burst(x: number, y: number, power: number, scale = 1): void {
+  burst(x: number, y: number, power: number, scale = 1, spread = BURST_REF_SPREAD * this.cfg.burstScale * scale): void {
+    // 面积守恒：展开半径缩到 0.6，覆盖面积只剩 0.36，粒子数必须跟着按平方缩，
+    // 否则窄屏上会从「太散」变成「糊成一团」。
+    const room = Math.max(0.35, Math.min(1.6, spread / (BURST_REF_SPREAD * this.cfg.burstScale)))
     const base = Math.min(this.cfg.fireworkCount, this.tier.sparkPerBurst)
-    const count = Math.max(12, Math.round(base * scale * (0.55 + 0.45 * power)))
+    const count = Math.max(12, Math.round(base * scale * (0.55 + 0.45 * power) * room * room))
     // v² 阻力下初速要给足，前 0.3 s 的猛扩就是烟花的「炸」感
-    const speed = (430 + 510 * power) * this.cfg.burstScale
+    const speed = (430 + 510 * power) * this.cfg.burstScale * room
     const hue = (Math.random() * PALETTE.length) | 0
     this.addFlash(x, y, hue, 0.7 + 0.5 * power * scale)
     for (let i = 0; i < count; i++) {
@@ -555,13 +583,13 @@ export class Effects {
     this.rlayer[idx] = layer
     this.rx[idx] = Math.random() * (this.w + 160) - 80
     this.ry[idx] = -30 - Math.random() * 160
-    const k = this.rainK
+    const k = this.rainMoveK
     const sp = RAIN_SPEED[layer] * (0.9 + Math.random() * 0.2) * k
     this.rvy[idx] = sp
     const wind =
       (1 + 0.35 * Math.sin(this.windT * 1.4)) * (1 + 0.2 * Math.sin(this.windT * 0.37))
     this.rvx[idx] = RAIN_DRIFT[layer] * (0.8 + Math.random() * 0.4) * k * wind
-    this.rlen[idx] = sp * RAIN_STREAK
+    this.rlen[idx] = Math.max(RAIN_MIN_LEN, sp * RAIN_STREAK)
   }
 
   // ---------- 更新 ----------
@@ -610,7 +638,7 @@ export class Effects {
           this.kay[i] = 180
           continue
         }
-        this.burst(this.kx[i], this.ky[i], this.kpower[i], this.kscale[i])
+        this.burst(this.kx[i], this.ky[i], this.kpower[i], this.kscale[i], this.kspread[i])
         this.kAlive[i] = 0
         this.rocketAlive--
       }
@@ -763,8 +791,8 @@ export class Effects {
       (1 + 0.35 * Math.sin(this.windT * 1.4)) * (1 + 0.2 * Math.sin(this.windT * 0.37))
     for (let layer = 0; layer < 3; layer++) {
       ctx.strokeStyle = this.rainStroke[layer]
-      ctx.lineWidth = Math.max(0.6, RAIN_WIDTH[layer] * this.rainK)
-      const tail = RAIN_DRIFT[layer] * RAIN_STREAK * this.rainK * wind
+      ctx.lineWidth = Math.max(RAIN_MIN_WIDTH, RAIN_WIDTH[layer] * this.rainK)
+      const tail = RAIN_DRIFT[layer] * RAIN_STREAK * this.rainMoveK * wind
       // 尾段（上半）alpha × 0.35，头段（下半）alpha × 1；每层两次 stroke，不用 gradient
       ctx.globalAlpha = 0.35
       ctx.beginPath()

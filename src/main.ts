@@ -141,6 +141,7 @@ function resize(): void {
   h = window.innerHeight
   const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR)
   effects.resize(w, h, dpr)
+  state.setCompact(effects.compact)
   person.setView(video.videoWidth, video.videoHeight, w, h)
 }
 
@@ -458,6 +459,7 @@ function updateHud(sig: ReturnType<FaceTracker['sample']>, now: number): void {
         `detect    ${face.lastDetectMs.toFixed(1)}ms (${face.delegate}, 每 ${DETECT_EVERY} 帧)`,
         `assets    ${face.assetSource}   headRot ${face.headRotDeg.toFixed(1)}°`,
         `person    ${segOn ? (person.active ? `on ${person.lastMs.toFixed(0)}ms (${person.delegate}, 每 ${segEvery} 帧) ${person.mw}x${person.mh}` : person.ready ? 'ready' : person.lastError ? `fail ${person.lastError}` : 'loading') : person.lastError ? `fail ${person.lastError}` : 'off'}`,
+        `screen    短边 ${Math.min(w, h)}   compact ${effects.compact ? 'yes' : 'no'}`,
         `occlude   ${segOn && person.active ? 'mask' : cameraOn ? 'ellipse' : '-'}   maskAge ${person.active ? (now - person.lastMaskAt).toFixed(0) : '-'}ms   segHz ${person.hz.toFixed(1)}${segOffSince ? '   (宽限中)' : ''}`,
         `tier      ${tier.name}   rain ${s.rainAlive}   spark ${s.sparkAlive}   rocket ${s.rocketAlive}`,
         `collide   ${s.collisions}/frame`,
