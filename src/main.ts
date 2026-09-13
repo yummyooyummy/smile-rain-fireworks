@@ -152,35 +152,50 @@ function resize(): void {
  * 回来又到身后。「偶尔在前面、有时又闪到后面」就是这个，不是遮罩滞后。
  */
 const SEG_OFF_GRACE_MS = 5000
+// 恢复也要有门槛：掉档一次就停、回档一次就开，会在降档线附近反复开关，
+// 每次开关都伴随一次人像层的显隐跳变。回到 mid 以上并稳住 8 s 才重新开。
+const SEG_ON_HOLD_MS = 8000
 let segOffSince = 0
+let segOnSince = 0
 
 function applySegTier(): void {
   const hardOff = !cameraOn || !flags.seg || !cfg.personSeg
   const tierOff = tier.name === 'low'
-  const want = !hardOff && !tierOff
   segEvery = tier.name === 'high' ? 4 : 6
-  if (want) {
+
+  if (hardOff) {
     segOffSince = 0
-    if (!segOn) {
-      segOn = true
-      void person.init()
-    }
-  } else if (segOn) {
-    if (hardOff) {
+    segOnSince = 0
+    if (segOn) {
       segOn = false
-      segOffSince = 0
-      person.stop()
-    } else if (!segOffSince) {
-      segOffSince = performance.now() // 只是档位掉了：先记时间，宽限期内不关
+      person.stop() // 硬关：连 Worker 一起收掉
     }
+    return
   }
+  if (tierOff) {
+    segOnSince = 0
+    if (segOn && !segOffSince) segOffSince = performance.now()
+    return
+  }
+  // 档位够了
+  segOffSince = 0
+  if (segOn) return
+  if (!segOnSince) segOnSince = performance.now()
 }
 
+/** 每帧跑一次：宽限到了才真停，稳定期满了才真开。 */
 function tickSegGrace(now: number): void {
   if (segOn && segOffSince && now - segOffSince > SEG_OFF_GRACE_MS) {
     segOn = false
     segOffSince = 0
-    person.stop()
+    person.pause() // 只是档位掉了：保留 Worker 和模型，恢复时零成本
+  }
+  if (!segOn && segOnSince && !(!cameraOn || !flags.seg || !cfg.personSeg) && tier.name !== 'low') {
+    if (now - segOnSince > SEG_ON_HOLD_MS) {
+      segOnSince = 0
+      segOn = true
+      person.resume()
+    }
   }
 }
 
@@ -245,6 +260,11 @@ async function connect(fromStart: boolean): Promise<void> {
   hud.hideStart()
   hud.showControls({ camera: true, clean: flags.clean })
   applySegTier()
+  if (segOnSince) {
+    segOnSince = 0
+    segOn = true
+    person.resume()
+  }
   startLoop()
 }
 
@@ -459,6 +479,7 @@ function updateHud(sig: ReturnType<FaceTracker['sample']>, now: number): void {
         `detect    ${face.lastDetectMs.toFixed(1)}ms (${face.delegate}, 每 ${DETECT_EVERY} 帧)`,
         `assets    ${face.assetSource}   headRot ${face.headRotDeg.toFixed(1)}°`,
         `person    ${segOn ? (person.active ? `on ${person.lastMs.toFixed(0)}ms (${person.delegate}, 每 ${segEvery} 帧) ${person.mw}x${person.mh}` : person.ready ? 'ready' : person.lastError ? `fail ${person.lastError}` : 'loading') : person.lastError ? `fail ${person.lastError}` : 'off'}`,
+        `seg       ${segOn ? 'on' : 'off'}${segOffSince ? ' (等停 ' + ((SEG_OFF_GRACE_MS - (now - segOffSince)) / 1000).toFixed(1) + 's)' : ''}${segOnSince ? ' (等开 ' + ((SEG_ON_HOLD_MS - (now - segOnSince)) / 1000).toFixed(1) + 's)' : ''}`,
         `screen    短边 ${Math.min(w, h)}   compact ${effects.compact ? 'yes' : 'no'}`,
         `occlude   ${segOn && person.active ? 'mask' : cameraOn ? 'ellipse' : '-'}   maskAge ${person.active ? (now - person.lastMaskAt).toFixed(0) : '-'}ms   segHz ${person.hz.toFixed(1)}${segOffSince ? '   (宽限中)' : ''}`,
         `tier      ${tier.name}   rain ${s.rainAlive}   spark ${s.sparkAlive}   rocket ${s.rocketAlive}`,

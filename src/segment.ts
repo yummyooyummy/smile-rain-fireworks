@@ -303,6 +303,25 @@ export class PersonMask implements PersonCollider {
     ctx.restore()
   }
 
+  /**
+   * 因为档位掉下去而停：**不销毁 Worker**，只是不再送帧、把人像层收起来。
+   * terminate 会连模型一起丢掉，恢复时要重新下载 + 建图（几百毫秒），
+   * 设备在降档线附近反复横跳时，这个代价本身就会再拖一次帧。
+   */
+  pause(): void {
+    this.busy = false
+    this.data = null
+    this.lastMaskAt = 0
+    this.hz = 0
+    this.clone.hidden = true
+  }
+
+  /** 恢复：Worker 还在就直接继续；人像层等第一张有效遮罩到了才显示（见 updateCssMask） */
+  resume(): void {
+    if (this.worker) return
+    void this.init()
+  }
+
   stop(): void {
     this.worker?.terminate()
     this.worker = null
