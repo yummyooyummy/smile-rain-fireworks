@@ -413,6 +413,7 @@ function loop(now: number): void {
 
   // 5. 物理 + 碰撞（每帧）
   const head = cameraOn ? sig.head : testHeadOn && cfg.showDebug ? testHead : null
+  person.setHead(head)
   const usePerson = segOn && person.active
   effects.update(dt, head, usePerson ? person : null)
 

@@ -36,10 +36,18 @@ export class PersonMask implements PersonCollider {
   mh = 0
   /**
    * 遮罩里「人」是哪个值。selfie_segmenter 的 categoryMask 实测是 0 = 人、1 = 背景，
-   * 和直觉相反，而且不同模型变体不一样。不猜：每帧看画面上沿和左右两边（几乎必然是背景）
-   * 哪个值占多数，那个就是背景，另一个就是人。
+   * 和文档直觉相反，而且不同模型变体不一样。默认按实测取 0；运行中再用脸校验（见 detectPolarity）。
    */
-  private personVal = 1
+  private personVal = 0
+  /** 每次 pause/stop 加一：晚到的 Worker 结果和 Image 解码回调看到号不对就丢掉，不会把旧遮罩重新挂上去 */
+  private gen = 0
+  private paused = false
+  // 最近一帧的头部椭圆（屏幕坐标），给极性校验用
+  private headCx = 0
+  private headCy = 0
+  private headRx = 0
+  private headRy = 0
+  private hasHead = false
   ready = false
   delegate: 'GPU' | 'CPU' | '-' = '-'
   lastMs = 0
@@ -88,6 +96,7 @@ export class PersonMask implements PersonCollider {
       this.delegate = m.delegate as 'GPU' | 'CPU'
     } else if (m.type === 'mask') {
       this.busy = false
+      if (this.paused) return // 暂停前已送出的那一帧回来了：丢掉
       this.data = m.data as Uint8Array
       this.mw = m.w as number
       this.mh = m.h as number
@@ -128,15 +137,70 @@ export class PersonMask implements PersonCollider {
       })
   }
 
-  private polarityVotes = 0 // 连续几帧的读数和当前极性相反
-  private polarityLocked = false
+  private polarityVotes = 0 // 连续几张遮罩的读数和当前极性相反
+  private polarityLocked = false // 已经用脸确认过一次
+
+  setHead(h: { cx: number; cy: number; rx: number; ry: number } | null): void {
+    this.hasHead = h !== null
+    if (h) {
+      this.headCx = h.cx
+      this.headCy = h.cy
+      this.headRx = h.rx
+      this.headRy = h.ry
+    }
+  }
+
+  /** 屏幕坐标 → 遮罩原始值；落在画面外返回 -1 */
+  private sample(sx: number, sy: number): number {
+    const vx = screenToVideoX(sx, this.map, this.w)
+    const vy = screenToVideoY(sy, this.map)
+    if (vx < 0 || vy < 0 || vx >= this.vw || vy >= this.vh) return -1
+    const mx = ((vx * this.mw) / this.vw) | 0
+    const my = ((vy * this.mh) / this.vh) | 0
+    return (this.data as Uint8Array)[my * this.mw + mx] > 0 ? 1 : 0
+  }
 
   /**
-   * 极性判定只看四个角上的小方块（各 12×12），不看整条边——手机竖屏离脸近时，
-   * 上沿和左右两边经常全是头发和肩膀，按整条边判会在两种极性之间来回翻，
-   * 表现为雨在人身边一闪一闪。再加迟滞：连续 6 帧都反了才翻，翻过一次就锁住。
+   * 极性判定：以脸为准。FaceLandmarker 给的头部椭圆内侧 40% 必然是人——在脸内部取 3×3 共 9 点，
+   * 至少 8 点一致才算「有把握」；没把握这一帧就不动。和当前极性相反且连续 3 张遮罩都有把握，
+   * 才翻——这样第一次判错也能自己纠回来，不会锁死。
+   * 之前只看画面四角、假设角落一定是背景：手机离脸近时四角全是头发和肩膀，整张遮罩来回翻，
+   * 表现就是雨在人和背景之间跳。四角现在只在还没见过脸、且没锁定时当兜底用。
    */
   private detectPolarity(): void {
+    let guess = -1
+    if (this.hasHead) {
+      let n = 0
+      let zero = 0
+      for (let j = -1; j <= 1; j++)
+        for (let i = -1; i <= 1; i++) {
+          const v = this.sample(this.headCx + i * 0.4 * this.headRx, this.headCy + j * 0.4 * this.headRy)
+          if (v < 0) continue
+          n++
+          if (v === 0) zero++
+        }
+      if (n >= 8) {
+        if (zero >= n - 1) guess = 0
+        else if (zero <= 1) guess = 1
+      }
+    } else if (!this.polarityLocked) {
+      guess = this.cornerGuess()
+    }
+    if (guess < 0) return
+    if (guess === this.personVal) {
+      this.polarityVotes = 0
+      if (this.hasHead) this.polarityLocked = true
+      return
+    }
+    if (++this.polarityVotes >= 3) {
+      this.personVal = guess
+      this.polarityVotes = 0
+      if (this.hasHead) this.polarityLocked = true
+    }
+  }
+
+  /** 兜底：四个角各 12×12，多数值当背景 */
+  private cornerGuess(): number {
     const d = this.data as Uint8Array
     const { mw, mh } = this
     const k = 12
@@ -153,20 +217,7 @@ export class PersonMask implements PersonCollider {
     box(mw - k, 0)
     box(0, mh - k)
     box(mw - k, mh - k)
-    const guess = nonzero * 2 > n ? 0 : 1 // 角上大多数是非零 → 非零是背景 → 人是 0
-    if (guess === this.personVal) {
-      this.polarityVotes = 0
-      return
-    }
-    if (!this.polarityLocked) {
-      this.personVal = guess
-      this.polarityLocked = true
-      return
-    }
-    if (++this.polarityVotes >= 6) {
-      this.personVal = guess
-      this.polarityVotes = 0
-    }
+    return nonzero * 2 > n ? 0 : 1
   }
 
   private isPersonVal(v: number): boolean {
@@ -199,7 +250,9 @@ export class PersonMask implements PersonCollider {
     // 直接换 mask-image，手机 Safari 会在新图解码完成前先渲染一帧「没有遮罩」——
     // 整个人像层闪一下。先用 Image 解码完再换，就没有这一帧。
     const im = new Image()
+    const gen = this.gen
     im.onload = () => {
+      if (gen !== this.gen || this.paused) return // 解码期间已经 pause/stop 了
       const url = `url(${dataUrl})`
       const st = this.clone.style
       st.maskImage = url
@@ -309,6 +362,8 @@ export class PersonMask implements PersonCollider {
    * 设备在降档线附近反复横跳时，这个代价本身就会再拖一次帧。
    */
   pause(): void {
+    this.gen++
+    this.paused = true
     this.busy = false
     this.data = null
     this.lastMaskAt = 0
@@ -318,15 +373,22 @@ export class PersonMask implements PersonCollider {
 
   /** 恢复：Worker 还在就直接继续；人像层等第一张有效遮罩到了才显示（见 updateCssMask） */
   resume(): void {
+    this.paused = false
     if (this.worker) return
     void this.init()
   }
 
   stop(): void {
+    this.gen++
+    this.paused = false
     this.worker?.terminate()
     this.worker = null
     this.ready = false
     this.busy = false
+    // 下次可能换模型（本地 / CDN 变体极性不同），极性从头判
+    this.personVal = 0
+    this.polarityLocked = false
+    this.polarityVotes = 0
     this.data = null
     this.lastMaskAt = 0
     this.hz = 0
