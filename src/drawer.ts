@@ -141,11 +141,10 @@ function syncFromConfig(): void {
     val.textContent = rawText(c.key, cfg[c.key])
     sliderFill(input)
   }
-  // 配色：取色相最接近的那个预设
+  // 配色：只认预设里的色相；存过的旧值（比如已删掉的极光 140）一律归暖金
   let best: (typeof PALETTE_PRESETS)[number] = PALETTE_PRESETS[0]
-  for (const p of PALETTE_PRESETS) {
-    if (Math.abs(p.hue - cfg.hueShift) < Math.abs(best.hue - cfg.hueShift)) best = p
-  }
+  for (const p of PALETTE_PRESETS) if (p.hue === cfg.hueShift) best = p
+  if (best.hue !== cfg.hueShift) patchConfig({ hueShift: best.hue })
   for (const btn of panel.querySelectorAll<HTMLElement>('[data-palette]')) {
     btn.classList.toggle('is-on', btn.dataset.palette === best.id)
   }

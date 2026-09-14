@@ -81,7 +81,6 @@ export const PALETTE_PRESETS = [
   { id: 'warm', hue: 0, swatch: ['#F0785A', '#E9B95A', '#FFF3E0'] },
   { id: 'sakura', hue: -28, swatch: ['#F07A8E', '#F0A8C0', '#FFF0F3'] },
   { id: 'mint', hue: 60, swatch: ['#6FC3B8', '#A8E0A0', '#EAFBF2'] },
-  { id: 'aurora', hue: 140, swatch: ['#5AA8F0', '#9B7AF0', '#EAF0FF'] },
 ] as const
 
 export type PalettePresetId = (typeof PALETTE_PRESETS)[number]['id']

@@ -83,7 +83,6 @@ export const copy = {
       warm: '暖金',
       sakura: '樱粉',
       mint: '薄荷',
-      aurora: '极光',
     },
     personSeg: '雨落在身后',
     personSegHint: '需要性能好一点的设备',
