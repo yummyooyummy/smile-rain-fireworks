@@ -907,8 +907,9 @@ export class Effects {
   }
 
   /** 调试用：把头部椭圆画出来 */
+  /** 画在雨层（逐帧清屏）。烟花层不清屏、靠 destination-out 淡出，低 alpha 会因取整永远擦不干净——之前留下的那个圈就是这么来的 */
   drawDebugHead(head: HeadEllipse): void {
-    const ctx = this.ctx
+    const ctx = this.rainCtx ?? this.ctx
     ctx.save()
     ctx.strokeStyle = 'rgba(111,195,184,0.7)'
     ctx.lineWidth = 1.5

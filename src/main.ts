@@ -46,10 +46,15 @@ fetch('effect.json', { cache: 'no-cache' })
   })
 
 function applyConfig(next: EffectConfig): void {
+  const prev = cfg
   cfg = next
   effects.setConfig(cfg)
   state.setConfig(cfg)
-  applySegTier()
+  // 玩家手动开关分割 / 碰撞体：立即生效，不走档位用的 8 s 稳定期；
+  // 余辉层清一次，免得上一种模式的痕迹（椭圆、碰撞闪白）留在画面上
+  const manual = prev.personSeg !== cfg.personSeg || prev.showCollider !== cfg.showCollider || prev.showDebug !== cfg.showDebug
+  applySegTier(manual)
+  if (manual) effects.clear()
 }
 
 let tier: Tier = flags.tier ? TIERS[flags.tier] : TIERS.mid
@@ -158,7 +163,8 @@ const SEG_ON_HOLD_MS = 8000
 let segOffSince = 0
 let segOnSince = 0
 
-function applySegTier(): void {
+/** immediate：玩家手动改的设置，跳过 8 s 稳定期直接开 */
+function applySegTier(immediate = false): void {
   const hardOff = !cameraOn || !flags.seg || !cfg.personSeg
   const tierOff = tier.name === 'low'
   segEvery = tier.name === 'high' ? 4 : 6
@@ -180,6 +186,12 @@ function applySegTier(): void {
   // 档位够了
   segOffSince = 0
   if (segOn) return
+  if (immediate) {
+    segOnSince = 0
+    segOn = true
+    person.resume()
+    return
+  }
   if (!segOnSince) segOnSince = performance.now()
 }
 
@@ -259,12 +271,7 @@ async function connect(fromStart: boolean): Promise<void> {
   inScene = true
   hud.hideStart()
   hud.showControls({ camera: true, clean: flags.clean })
-  applySegTier()
-  if (segOnSince) {
-    segOnSince = 0
-    segOn = true
-    person.resume()
-  }
+  applySegTier(true) // 进场：分割立刻开，不等稳定期
   startLoop()
 }
 
