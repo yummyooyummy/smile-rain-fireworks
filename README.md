@@ -6,14 +6,11 @@
 
 **[Live Demo → smile.kkyq.hk.cn](https://smile.kkyq.hk.cn)**（国内直连；备用地址 [smile-rain-fireworks.vercel.app](https://smile-rain-fireworks.vercel.app)）
 
-<!-- 截图占位：把 shot-1..4.png 放进 docs/ 后，把下面这段注释换成图片表格。
-     GitHub 对指向不存在文件的 <img> 会渲染成破图，所以文件到位前不放图片标签。
 | 待机 | 微笑 · 下雨 | 大笑 · 烟花撞头 | 打开「显示碰撞体」 |
 | --- | --- | --- | --- |
-| <img src="docs/shot-1.png" width="180" /> | <img src="docs/shot-2.png" width="180" /> | <img src="docs/shot-3.png" width="180" /> | <img src="docs/shot-4.png" width="180" /> |
--->
+| <img src="docs/shot-1.jpg" width="180" /> | <img src="docs/shot-2.jpg" width="180" /> | <img src="docs/shot-3.jpg" width="180" /> | <img src="docs/shot-4.jpg" width="180" /> |
 
-_交互截图待补（`docs/shot-1..4.png`）。_ 评审设备打不开摄像头时，右下角圆钮点一下下雨、长按放烟花。
+评审设备打不开摄像头时，右下角圆钮点一下下雨、长按放烟花。
 
 ---
 
@@ -157,21 +154,23 @@ camera.ts → face.ts(信号总线) → state.ts(状态机) → particles.ts(发
 shader 编译尖峰不计入 EMA——它一帧就能把一台 247 fps 的电脑误判成低档机）。
 当前档位在 `?debug=1` 面板里可见。
 
-### 实测（待填）
+### 实测（2026-09-13，瞬时读数）
 
 读数方法：打开对应地址 → 点开始 → 等 30 s（避开 shader 编译与档位热身）→ 大笑一次，
 **趁粒子还在飞时**读 `?debug=1` 面板的四个数；3 分钟后再读一次 FPS 看有没有下滑。
 
-**测试设备**：（待填 Mac 型号 + Chrome 版本 / 手机型号 + 浏览器）
+**测试设备**：Mac（M4 Pro）/ Chrome 153.0.8010.36 arm64；iPhone 14 Pro Max / 微信内置浏览器。
+下面是烟花粒子飞行中的**瞬时读数**（单次、非平均），只用来看数量级和三组之间的相对差，不代表稳态性能。
+微信内置浏览器和桌面 Chrome 是两套渲染环境，两行数字不能横向比。
 
 | 设备 | 参数 | 稳态 FPS | 主线程单帧 | 检测均摊 | 人像分割 | 3 分钟后 FPS |
 | --- | --- | --- | --- | --- | --- | --- |
-| PC | 默认 | | | | | |
-| PC | `?seg=0`（关分割） | | | | — | |
-| PC | `?tier=low`（钉低档） | | | | off | |
-| 手机 | 默认 | | | | | |
-| 手机 | `?seg=0` | | | | — | |
-| 手机 | `?tier=low` | | | | off | |
+| Mac | 默认 | 161 | 6.2 ms | 6.7 ms | 4 ms | 132 |
+| Mac | `?seg=0`（关分割） | 210 | — | — | — | 157 |
+| Mac | `?tier=low`（钉低档） | 214 | — | — | off | 182 |
+| 手机 | 默认 | 58 | 17.4 ms | 46 ms | 45 ms | 62 |
+| 手机 | `?seg=0` | 62 | 16 ms | 44 ms | — | 65 |
+| 手机 | `?tier=low` | 77 | 12 ms | 61 ms | off | 99 |
 
 三组对照分别回答三个问题：默认能不能跑到目标帧率、人像分割这个加分项花掉多少帧、
 低档机降级之后还剩多少。这也是这道题「系统 ROI」那一栏的全部证据。
