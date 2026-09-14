@@ -24,8 +24,6 @@ export const copy = {
     done: '玩法解锁了，尽情笑吧',
     smileBar: '微笑',
     laughBar: '大笑',
-    rainOn: '下雨中',
-    fireOn: '烟花中',
   },
   hud: {
     manualHint: '点一下下雨 · 长按放烟花',

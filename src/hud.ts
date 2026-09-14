@@ -52,8 +52,6 @@ export class Hud {
   private laughFill!: HTMLElement
   private smileRow!: HTMLElement
   private laughRow!: HTMLElement
-  private smileTag!: HTMLElement
-  private laughTag!: HTMLElement
   private statusEl!: HTMLElement
   private banner!: HTMLElement
   private bannerBtn!: HTMLButtonElement
@@ -140,8 +138,8 @@ export class Hud {
       <div class="guide" id="guideWrap" hidden>
         <p class="guide-text" id="guideText"></p>
         <div class="guide-bars">
-          <div class="guide-bar-row" id="smileRow"><span>${copy.guide.smileBar}</span><div class="guide-bar" data-phase="smile"><i id="smileFill"></i></div><em id="smileTag"></em></div>
-          <div class="guide-bar-row" id="laughRow"><span>${copy.guide.laughBar}</span><div class="guide-bar" data-phase="laugh"><i id="laughFill"></i></div><em id="laughTag"></em></div>
+          <div class="guide-bar-row" id="smileRow"><span>${copy.guide.smileBar}</span><div class="guide-bar" data-phase="smile"><i id="smileFill"></i></div></div>
+          <div class="guide-bar-row" id="laughRow"><span>${copy.guide.laughBar}</span><div class="guide-bar" data-phase="laugh"><i id="laughFill"></i></div></div>
         </div>
       </div>
 
@@ -187,8 +185,6 @@ export class Hud {
     this.laughFill = $('laughFill')
     this.smileRow = $('smileRow')
     this.laughRow = $('laughRow')
-    this.smileTag = $('smileTag')
-    this.laughTag = $('laughTag')
     this.statusEl = $('statusEl')
     this.banner = $('banner')
     this.bannerBtn = $('reconnectBtn')
@@ -487,10 +483,6 @@ export class Hud {
     this.smileRow.classList.toggle('is-dim', smileStatus === 'dim')
     this.smileRow.classList.toggle('is-active', smileStatus === 'active')
     this.laughRow.classList.toggle('is-active', laughStatus === 'active')
-    const st = smileStatus === 'active' ? copy.guide.rainOn : ''
-    const lt = laughStatus === 'active' ? copy.guide.fireOn : ''
-    if (this.smileTag.textContent !== st) this.smileTag.textContent = st
-    if (this.laughTag.textContent !== lt) this.laughTag.textContent = lt
   }
 
   // ---------- 提示 ----------

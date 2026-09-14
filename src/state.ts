@@ -209,9 +209,13 @@ export class ExpressionState {
           this.tLaughExit = sig.jawOpen < this.laughExitJaw ? this.tLaughExit + ms : 0
           if (this.tLaughExit >= HOLD_LAUGH_EXIT) {
             this.leaveLaughing()
-            this.mode = 'smiling'
+            // 看当下的笑值决定去哪：还在微笑的退出线以上就接着下雨，否则直接回待机。
+            // 之前一律回 Smiling，微笑条会先跳满、半秒后再掉——就是「大笑完微笑条闪一下」。
+            this.mode = sig.smile >= this.smileExit ? 'smiling' : 'idle'
             this.tLaughExit = 0
             this.tSmileExit = 0
+            this.tSmileEnter = 0
+            this.tLaughEnter = 0
           }
           break
       }

@@ -377,15 +377,6 @@ body {
   opacity: 0.35;
 }
 
-.guide-bar-row em {
-  font-style: normal;
-  font-size: 0.68rem;
-  color: var(--gold);
-  letter-spacing: 0.06em;
-  white-space: nowrap;
-  min-width: 3em;
-}
-
 .guide-bar-row span {
   width: 26px;
   white-space: nowrap;
