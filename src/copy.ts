@@ -18,10 +18,9 @@ export const copy = {
     previewAlt: '玩法封面',
   },
   guide: {
-    step1: '对着镜头微笑，雨就会落下来',
-    step2: '再张开嘴大笑试试',
-    step3: '摆摆头，让烟花撞到你',
-    done: '玩法解锁了，尽情笑吧',
+    step1: '尝试微笑',
+    step2: '尝试大笑',
+    done: '尽情享受',
     smileBar: '微笑',
     laughBar: '大笑',
   },

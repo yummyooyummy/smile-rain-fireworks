@@ -465,7 +465,8 @@ function loop(now: number): void {
 function updateHud(sig: ReturnType<FaceTracker['sample']>, now: number): void {
   if (effects.stats.collisions > 0) state.reachedCollision = true
 
-  // 引导三步 → 走完只留两根进度条（各自独立，互不清零）
+  // 引导：尝试微笑 → 尝试大笑 → 尽情享受；走完只留两根进度条。
+  // 碰撞仍在跑，不再单独提示「摆头」。
   const sp = state.smileProgress
   const lp = state.laughProgress
   const ss = state.smileStatus
@@ -478,8 +479,6 @@ function updateHud(sig: ReturnType<FaceTracker['sample']>, now: number): void {
     hud.setGuide(copy.guide.step1, sp, lp, ss, ls)
   } else if (!state.reachedLaugh) {
     hud.setGuide(copy.guide.step2, sp, lp, ss, ls)
-  } else if (!state.reachedCollision) {
-    hud.setGuide(copy.guide.step3, sp, lp, ss, ls)
   } else {
     if (!guideDoneAt) guideDoneAt = now
     hud.setGuide(copy.guide.done, sp, lp, ss, ls)
