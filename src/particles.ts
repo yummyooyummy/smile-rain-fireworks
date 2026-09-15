@@ -265,14 +265,17 @@ export class Effects {
     if (this.rainCtx) this.fit(this.rainCtx)
   }
 
-  /** 退出回开始页时清空所有粒子。只清 alive 标志，不重新分配。 */
+  /** 退出回开始页或切换遮挡时清空粒子。只清 alive 标志，不重新分配。 */
   clear(): void {
     this.ctx.globalCompositeOperation = 'source-over'
     this.ctx.clearRect(0, 0, this.w, this.h)
+    if (this.rainCtx) this.rainCtx.clearRect(0, 0, this.w, this.h)
     this.rAlive.fill(0)
     this.sAlive.fill(0)
     this.kAlive.fill(0)
     this.ft_.fill(0)
+    this.headPulse = 0
+    this.headPulseCooldown = 0
     this.rainAlive = 0
     this.sparkAlive = 0
     this.rocketAlive = 0
@@ -852,17 +855,20 @@ export class Effects {
 
   private drawFront(head: HeadEllipse | null): void {
     const ctx = this.ctx
-    // 头部微光脉冲：碰撞发生时沿椭圆边缘亮一圈
+    // 碰撞脉冲椭圆必须画在雨层（逐帧清屏）。画在 #fx 余辉层上，低 alpha 会因取整擦不干净。
+    // 人像遮挡开启时调用方传 null，避免遮挡关闭后才把「只记没画」的脉冲一次性画出来。
     if (head && this.headPulse > 0) {
+      const pctx = this.rainCtx ?? ctx
       const t = this.headPulse / PULSE_MS
-      ctx.globalCompositeOperation = 'lighter'
-      ctx.beginPath()
-      ctx.ellipse(head.cx, head.cy, head.rx, head.ry, head.rot, 0, Math.PI * 2)
-      ctx.globalAlpha = 0.32 * t
-      ctx.strokeStyle = this.pulseStroke
-      ctx.lineWidth = 2 + 7 * (1 - t)
-      ctx.stroke()
-      ctx.globalAlpha = 1
+      pctx.save()
+      pctx.globalCompositeOperation = 'lighter'
+      pctx.beginPath()
+      pctx.ellipse(head.cx, head.cy, head.rx, head.ry, head.rot, 0, Math.PI * 2)
+      pctx.globalAlpha = 0.32 * t
+      pctx.strokeStyle = this.pulseStroke
+      pctx.lineWidth = 2 + 7 * (1 - t)
+      pctx.stroke()
+      pctx.restore()
     }
 
     ctx.globalCompositeOperation = 'lighter'

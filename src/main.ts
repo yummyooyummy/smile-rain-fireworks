@@ -439,10 +439,12 @@ function loop(now: number): void {
   const usePerson = segOn && person.active
   effects.update(dt, head, usePerson ? person : null)
 
-  // 6. 绘制（人像模式下头部脉冲那圈椭圆没有意义，不画）
-  effects.draw(usePerson ? null : head)
+  // 6. 绘制。头部椭圆（脉冲 + 调试轮廓）只在调试/碰撞体开启且当前用椭圆碰撞时画；
+  // 人像遮挡模式下不画，关闭遮挡时 clear() 会清掉余辉层上的旧圈。
+  const showHeadGraphic = (cfg.showDebug || cfg.showCollider) && !usePerson && !!head
+  effects.draw(showHeadGraphic ? head : null)
   camFront.classList.toggle('is-collider', (cfg.showDebug || cfg.showCollider) && usePerson)
-  if ((cfg.showDebug || cfg.showCollider) && !usePerson && head) effects.drawDebugHead(head)
+  if (showHeadGraphic && head) effects.drawDebugHead(head)
 
   // 7. HUD
   if (cameraOn) noFaceMs = sig.faceOk ? 0 : noFaceMs + dt * 1000
