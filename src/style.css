@@ -905,23 +905,9 @@ body {
   }
 }
 
-/* 截图分享：挨着手动圆钮左侧，略小一号，不挡画面中央 */
+/* 截图分享：入口对用户隐藏，底层 shareFrame 仍保留。display:none 不占位、不可聚焦。 */
 .share {
-  position: absolute;
-  right: calc(16px + env(safe-area-inset-right, 0px));
-  bottom: calc(58px + env(safe-area-inset-bottom, 0px));
-  width: 48px;
-  height: 48px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--glass);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  color: var(--ink);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  padding: 0;
+  display: none !important;
 }
 
 .share:active {

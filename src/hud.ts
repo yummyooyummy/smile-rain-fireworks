@@ -164,7 +164,7 @@ export class Hud {
         </svg>
       </button>
 
-      <button class="share" id="shareBtn" aria-label="${copy.hud.share}" hidden>
+      <button class="share" id="shareBtn" aria-hidden="true" tabindex="-1" hidden>
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>
         </svg>
@@ -371,7 +371,7 @@ export class Hud {
     this.topbar.hidden = opts.clean
     this.manualBtn.hidden = opts.camera
     this.manualHint.hidden = opts.camera
-    this.shareBtn.hidden = !opts.camera
+    this.shareBtn.hidden = true
     this.banner.hidden = opts.camera
     this.setReconnecting(false)
   }
