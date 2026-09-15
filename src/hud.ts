@@ -407,10 +407,9 @@ export class Hud {
       ctx.drawImage(this.video, (vw - sw) / 2, (vh - sh) / 2, sw, sh, 0, 0, w, h)
       ctx.restore()
     }
-    if (this.person.active) {
-      if (this.rain.width && this.rain.height) ctx.drawImage(this.rain, 0, 0)
-      this.person.drawCutout(ctx, this.video, w, h)
-    }
+    // 雨层与实况一致：始终在镜头之上、人像切片之下。不随遮挡开关省略，也不再镜像。
+    if (this.rain.width && this.rain.height) ctx.drawImage(this.rain, 0, 0)
+    if (this.person.active) this.person.drawCutout(ctx, this.video, w, h)
     ctx.drawImage(this.fx, 0, 0)
     return off
   }
