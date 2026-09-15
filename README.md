@@ -25,7 +25,7 @@ MediaPipe Face Landmarker 每帧输出 52 个表情系数（0–1）。取
 
 | 转移 | 条件 |
 | --- | --- |
-| Idle → Smiling | smile ≥ 0.45 持续 300 ms |
+| Idle → Smiling | smile ≥ 0.45 持续 600 ms |
 | Smiling → Idle | smile < 0.30 持续 500 ms |
 | Smiling → Laughing | smile ≥ 0.60 且 jawOpen ≥ 0.35 持续 200 ms |
 | Laughing → Smiling | jawOpen < 0.20 持续 400 ms |

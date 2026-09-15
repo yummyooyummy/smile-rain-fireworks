@@ -60,7 +60,7 @@ camera → face(信号总线) → state(状态机) → particles(发射器 + 碰
 
 | 转移 | 条件 |
 | --- | --- |
-| Idle → Smiling | smile ≥ `smileEnter`(默认 0.30) 持续 300 ms |
+| Idle → Smiling | smile ≥ `smileEnter`(默认 0.30) 持续 600 ms |
 | Smiling → Idle | smile < `smileExit`(0.30) 持续 500 ms |
 | Idle / Smiling → Laughing | jawOpen ≥ `laughJaw`(默认 0.15) 且 smile ≥ 微笑退出阈值 持续 150 ms（Idle 可直达；嘴在张开时微笑计时最多暂停 400 ms） |
 | Laughing → Smiling | jawOpen < 0.20 持续 400 ms |

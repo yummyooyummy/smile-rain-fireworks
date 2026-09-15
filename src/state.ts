@@ -19,7 +19,7 @@ export type Mode = 'idle' | 'smiling' | 'laughing'
 const SMILE_EXIT_RATIO = 0.7
 const LAUGH_EXIT_RATIO = 0.6
 
-const HOLD_SMILE_ENTER = 300 // ≈6 检测帧
+const HOLD_SMILE_ENTER = 600 // ≈12 检测帧
 const HOLD_SMILE_EXIT = 500 // ≈10 检测帧
 const HOLD_LAUGH_ENTER = 150 // ≈3 检测帧；大笑要比微笑先被判出来，否则「突然大笑」会先下雨
 const HOLD_LAUGH_EXIT = 400 // ≈8 检测帧
@@ -58,6 +58,8 @@ export class ExpressionState {
   smileStatus: 'charge' | 'active' | 'dim' = 'charge'
   laughStatus: 'charge' | 'active' | 'dim' = 'charge'
   private tSmileHold = 0
+  /** 大笑期间或刚离开大笑：微笑行保持弱化，直到重新进入微笑候选计时 */
+  private smileHoldDim = false
 
   private get smileExit(): number {
     return this.cfg.smileEnter * SMILE_EXIT_RATIO
@@ -118,6 +120,7 @@ export class ExpressionState {
     this.tLaughEnter = 0
     this.tLaughExit = 0
     this.tSmileHold = 0
+    this.smileHoldDim = false
     this.tNoFace = 0
     this.burstCooldown = 0
     this.smallBurstTimer = 0
@@ -161,9 +164,9 @@ export class ExpressionState {
     if (sig.faceOk) {
       switch (this.mode) {
         case 'idle': {
-          // 直接大笑也要能放烟花：不强迫用户先经过「微笑 300 ms」这一站。
+          // 直接大笑也要能放烟花：不强迫用户先经过「微笑 600 ms」这一站。
           // 早期版本必须 Idle → Smiling → Laughing 串行走，用户一上来就大笑，
-          // 会在 Smiling 的 300 ms 保持期里等一下，感觉「反应不过来」。
+          // 会在 Smiling 的保持期里等一下，感觉「反应不过来」。
           const laughingNow = this.isLaughing(sig)
           this.tLaughEnter = laughingNow ? this.tLaughEnter + ms : 0
           if (this.tLaughEnter >= HOLD_LAUGH_ENTER) {
@@ -213,7 +216,7 @@ export class ExpressionState {
           if (this.tLaughExit >= HOLD_LAUGH_EXIT) {
             this.leaveLaughing()
             // 不继承大笑期间的满进度：清掉微笑计时，回待机。
-            // 若仍满足微笑进入条件，idle 分支会按原规则重新累计 300 ms，不会直接跳满。
+            // 若仍满足微笑进入条件，idle 分支会按原规则重新累计 600 ms，不会直接跳满。
             this.mode = 'idle'
             this.tLaughExit = 0
             this.tSmileExit = 0
@@ -270,12 +273,14 @@ export class ExpressionState {
     this.rainRate += Math.abs(diff) <= speed ? diff : Math.sign(diff) * speed
 
     // ---- 两根进度条：先定交互意图，再写进度。弱化跟意图走，不跟满额走 ----
-    // 大笑优先。idle 微笑条只反映 300 ms 进入计时，不用 smile/阈值模拟强度——
+    // 大笑优先。idle 微笑条只反映进入计时，不用 smile/阈值模拟强度——
     // 突然大笑时 smile 会先过线，模拟值会瞬间变成 1，条先闪满再变淡。
     const laughCandidate = this.mode !== 'laughing' && this.isLaughing(sig)
     const laughIntent = this.mode === 'laughing' || laughCandidate
     const smileIntent = !laughIntent && (this.mode === 'smiling' || this.tSmileEnter > 0)
-    this.smileStatus = laughIntent ? 'dim' : this.mode === 'smiling' ? 'active' : 'charge'
+    if (laughIntent) this.smileHoldDim = true
+    else if (this.mode === 'smiling' || this.tSmileEnter > 0) this.smileHoldDim = false
+    this.smileStatus = this.smileHoldDim ? 'dim' : this.mode === 'smiling' ? 'active' : 'charge'
     this.laughStatus = this.mode === 'laughing' ? 'active' : smileIntent ? 'dim' : 'charge'
     this.smileProgress =
       this.mode === 'smiling' ? 1 : this.mode === 'laughing' ? 0 : Math.min(1, this.tSmileEnter / HOLD_SMILE_ENTER)
