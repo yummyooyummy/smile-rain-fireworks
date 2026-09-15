@@ -54,9 +54,9 @@ export class ExpressionState {
   /** 两根进度条：「离微笑触发还差多少」「离大笑触发还差多少」，各自独立 */
   smileProgress = 0
   laughProgress = 0
-  /** 进度条语义：charge = 触发进度；active = 已触发（标签「下雨中 / 烟花中」）；dim = 被更高优先级的意图压住 */
+  /** 进度条语义：charge = 触发进度；active = 已触发；dim = 被另一根条的意图压住 */
   smileStatus: 'charge' | 'active' | 'dim' = 'charge'
-  laughStatus: 'charge' | 'active' = 'charge'
+  laughStatus: 'charge' | 'active' | 'dim' = 'charge'
   private tSmileHold = 0
 
   private get smileExit(): number {
@@ -110,11 +110,14 @@ export class ExpressionState {
     this.burstScale = 1
     this.smileProgress = 0
     this.laughProgress = 0
+    this.smileStatus = 'charge'
+    this.laughStatus = 'charge'
     this.resetGuide()
     this.tSmileEnter = 0
     this.tSmileExit = 0
     this.tLaughEnter = 0
     this.tLaughExit = 0
+    this.tSmileHold = 0
     this.tNoFace = 0
     this.burstCooldown = 0
     this.smallBurstTimer = 0
@@ -209,13 +212,14 @@ export class ExpressionState {
           this.tLaughExit = sig.jawOpen < this.laughExitJaw ? this.tLaughExit + ms : 0
           if (this.tLaughExit >= HOLD_LAUGH_EXIT) {
             this.leaveLaughing()
-            // 看当下的笑值决定去哪：还在微笑的退出线以上就接着下雨，否则直接回待机。
-            // 之前一律回 Smiling，微笑条会先跳满、半秒后再掉——就是「大笑完微笑条闪一下」。
-            this.mode = sig.smile >= this.smileExit ? 'smiling' : 'idle'
+            // 不继承大笑期间的满进度：清掉微笑计时，回待机。
+            // 若仍满足微笑进入条件，idle 分支会按原规则重新累计 300 ms，不会直接跳满。
+            this.mode = 'idle'
             this.tLaughExit = 0
             this.tSmileExit = 0
             this.tSmileEnter = 0
             this.tLaughEnter = 0
+            this.tSmileHold = 0
           }
           break
       }
@@ -265,15 +269,14 @@ export class ExpressionState {
     const diff = target - this.rainRate
     this.rainRate += Math.abs(diff) <= speed ? diff : Math.sign(diff) * speed
 
-    // ---- 两根进度条：各自独立，互不清零 ----
-    // 两根条永远表示「触发进度」，触发之后变成状态标签；不把雨量混作进度。
-    // 大笑候选真正成立（两个条件都满足、正在计时）时才压掉微笑条——一张嘴就压会让界面跟着说话跳。
-    const candidate = this.mode !== 'laughing' && this.isLaughing(sig)
-    this.smileProgress = this.mode !== 'idle' ? 1 : Math.min(1, sig.smile / c.smileEnter)
-    this.smileStatus = this.mode === 'laughing' || candidate ? 'dim' : this.mode === 'smiling' ? 'active' : 'charge'
-    this.laughStatus = this.mode === 'laughing' ? 'active' : 'charge'
-    // 大笑条 = 判定条件本身：条满 ⇔ 再保持 150 ms 就放烟花。
-    // 早期版本条只看张嘴、判定却还要 smile ≥ 0.60，于是出现「大笑条满了却不放烟花」。
+    // ---- 两根进度条：弱化由 mode / 候选意图控制，不靠进度是否归零 ----
+    const laughCandidate = this.mode !== 'laughing' && this.isLaughing(sig)
+    this.smileStatus =
+      this.mode === 'laughing' || laughCandidate ? 'dim' : this.mode === 'smiling' ? 'active' : 'charge'
+    this.laughStatus = this.mode === 'laughing' ? 'active' : this.mode === 'smiling' ? 'dim' : 'charge'
+    // 大笑期间不累计、不显示满格微笑进度；退出时已清计时，idle 用当前笑值重新充电。
+    this.smileProgress =
+      this.mode === 'smiling' ? 1 : this.mode === 'laughing' ? 0 : Math.min(1, sig.smile / c.smileEnter)
     this.laughProgress = this.mode === 'laughing' ? 1 : this.laughGate(sig)
   }
 

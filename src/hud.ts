@@ -457,7 +457,7 @@ export class Hud {
     smile: number,
     laugh: number,
     smileStatus: 'charge' | 'active' | 'dim' = 'charge',
-    laughStatus: 'charge' | 'active' = 'charge',
+    laughStatus: 'charge' | 'active' | 'dim' = 'charge',
   ): void {
     if (text === null) {
       if (this.guideWrap.hidden || this.guideHideTimer) return
@@ -479,9 +479,9 @@ export class Hud {
     if (text !== '' && this.guideText.textContent !== text) this.guideText.textContent = text
     this.smileFill.style.transform = `scaleX(${Math.max(0, Math.min(1, smile))})`
     this.laughFill.style.transform = `scaleX(${Math.max(0, Math.min(1, laugh))})`
-    // 触发前是进度，触发后是状态标签；被更高优先级意图压住时整行变淡
     this.smileRow.classList.toggle('is-dim', smileStatus === 'dim')
     this.smileRow.classList.toggle('is-active', smileStatus === 'active')
+    this.laughRow.classList.toggle('is-dim', laughStatus === 'dim')
     this.laughRow.classList.toggle('is-active', laughStatus === 'active')
   }
 
