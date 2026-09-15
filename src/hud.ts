@@ -28,10 +28,6 @@ export type StartState =
 const HOLD_DELAY = 350
 const HOLD_REPEAT = 500
 const GEAR_LONG_PRESS = 600
-/** 大笑条可见 scaleX 低于此视为收尾完成，避免无限接近 0 一直弱化微笑条 */
-const BAR_VISUAL_EPS = 0.02
-/** 切到大笑时，微笑条停在切换前的显示进度再淡出；不是业务计时 */
-const SMILE_FADE_MS = 150
 
 export class Hud {
   private root: HTMLElement
@@ -73,7 +69,7 @@ export class Hud {
   private toastTimer = 0
   private startHideTimer = 0
   private guideHideTimer = 0
-  /** 微笑条淡出快照：只影响显示，不回写状态机 */
+  /** 切入大笑时冻结当时的微笑幅度，弱化期间一直用；只影响显示 */
   private smileFadeUntil = 0
   private smileFadeHold = 0
 
@@ -486,17 +482,14 @@ export class Hud {
     if (text !== '' && this.guideText.textContent !== text) this.guideText.textContent = text
     const laughX = Math.max(0, Math.min(1, laugh))
     let smileX = Math.max(0, Math.min(1, smile))
-    const now = performance.now()
     const dim = smileStatus === 'dim'
     if (dim) {
-      // 只快照业务进度，不用计算中的 CSS scale（那会把上一轮满格当成当前值）
+      // 整段弱化都钉在切入时的幅度，不跟业务清零/满格走
       if (this.smileFadeUntil === 0) {
-        if (smileX > BAR_VISUAL_EPS) {
-          this.smileFadeHold = smileX
-          this.smileFadeUntil = now + SMILE_FADE_MS
-        }
+        this.smileFadeHold = smileX
+        this.smileFadeUntil = 1
       }
-      if (now < this.smileFadeUntil) smileX = this.smileFadeHold
+      smileX = this.smileFadeHold
     } else if (this.smileFadeUntil !== 0) {
       this.smileFadeUntil = 0
       this.smileFill.style.transition = 'none'

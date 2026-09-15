@@ -50,16 +50,15 @@ export class ExpressionState {
   burstPower = 0
   burstScale = 1
 
-  /** 引导进度条用：当前正在朝哪个触发靠近，以及进度 0–1 */
-  /** 两根进度条：「离微笑触发还差多少」「离大笑触发还差多少」，各自独立 */
+  /** 业务：Idle 时微笑进入候选计时 0–1，Smiling=1，Laughing=0。不画条。 */
   smileProgress = 0
+  /** 显示：clamp(smile / smileEnter, 0, 1)，随当前微笑幅度涨落 */
+  smileAmp = 0
   laughProgress = 0
-  /** 进度条语义：charge = 触发进度；active = 已触发；dim = 被另一根条的意图压住 */
+  /** 进度条语义：charge = 未触发；active = 已触发；dim = 被另一根条的意图压住 */
   smileStatus: 'charge' | 'active' | 'dim' = 'charge'
   laughStatus: 'charge' | 'active' | 'dim' = 'charge'
   private tSmileHold = 0
-  /** 大笑期间或刚离开大笑：微笑行保持弱化，直到重新进入微笑候选计时 */
-  private smileHoldDim = false
 
   private get smileExit(): number {
     return this.cfg.smileEnter * SMILE_EXIT_RATIO
@@ -111,6 +110,7 @@ export class ExpressionState {
     this.burstPower = 0
     this.burstScale = 1
     this.smileProgress = 0
+    this.smileAmp = 0
     this.laughProgress = 0
     this.smileStatus = 'charge'
     this.laughStatus = 'charge'
@@ -120,7 +120,6 @@ export class ExpressionState {
     this.tLaughEnter = 0
     this.tLaughExit = 0
     this.tSmileHold = 0
-    this.smileHoldDim = false
     this.tNoFace = 0
     this.burstCooldown = 0
     this.smallBurstTimer = 0
@@ -272,16 +271,15 @@ export class ExpressionState {
     const diff = target - this.rainRate
     this.rainRate += Math.abs(diff) <= speed ? diff : Math.sign(diff) * speed
 
-    // ---- 两根进度条：先定交互意图，再写进度。弱化跟意图走，不跟满额走 ----
-    // 大笑优先。idle 微笑条只反映进入计时，不用 smile/阈值模拟强度——
-    // 突然大笑时 smile 会先过线，模拟值会瞬间变成 1，条先闪满再变淡。
+    // ---- 两根进度条：显示与触发分开。弱化跟意图走 ----
+    // 微笑条画当前幅度；进入计时仍走 tSmileEnter，不画条、不改触发。
     const laughCandidate = this.mode !== 'laughing' && this.isLaughing(sig)
     const laughIntent = this.mode === 'laughing' || laughCandidate
     const smileIntent = !laughIntent && (this.mode === 'smiling' || this.tSmileEnter > 0)
-    if (laughIntent) this.smileHoldDim = true
-    else if (this.mode === 'smiling' || this.tSmileEnter > 0) this.smileHoldDim = false
-    this.smileStatus = this.smileHoldDim ? 'dim' : this.mode === 'smiling' ? 'active' : 'charge'
+    this.smileStatus = laughIntent ? 'dim' : this.mode === 'smiling' ? 'active' : 'charge'
     this.laughStatus = this.mode === 'laughing' ? 'active' : smileIntent ? 'dim' : 'charge'
+    const enter = this.cfg.smileEnter || 1
+    this.smileAmp = Math.min(1, Math.max(0, sig.smile / enter))
     this.smileProgress =
       this.mode === 'smiling' ? 1 : this.mode === 'laughing' ? 0 : Math.min(1, this.tSmileEnter / HOLD_SMILE_ENTER)
     this.laughProgress = this.mode === 'laughing' ? 1 : this.laughGate(sig)

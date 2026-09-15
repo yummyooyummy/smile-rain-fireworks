@@ -467,21 +467,21 @@ function updateHud(sig: ReturnType<FaceTracker['sample']>, now: number): void {
 
   // 引导：尝试微笑 → 尝试大笑 → 尽情享受；走完只留两根进度条。
   // 碰撞仍在跑，不再单独提示「摆头」。
-  const sp = state.smileProgress
+  const amp = state.smileAmp
   const lp = state.laughProgress
   const ss = state.smileStatus
   const ls = state.laughStatus
   if (!cfg.showGuide || flags.clean || !cameraOn) {
     hud.setGuide(null, 0, 0)
   } else if (guideDone) {
-    hud.setGuide('', sp, lp, ss, ls)
+    hud.setGuide('', amp, lp, ss, ls)
   } else if (!state.reachedSmile) {
-    hud.setGuide(copy.guide.step1, sp, lp, ss, ls)
+    hud.setGuide(copy.guide.step1, amp, lp, ss, ls)
   } else if (!state.reachedLaugh) {
-    hud.setGuide(copy.guide.step2, sp, lp, ss, ls)
+    hud.setGuide(copy.guide.step2, amp, lp, ss, ls)
   } else {
     if (!guideDoneAt) guideDoneAt = now
-    hud.setGuide(copy.guide.done, sp, lp, ss, ls)
+    hud.setGuide(copy.guide.done, amp, lp, ss, ls)
     if (now - guideDoneAt > 2000) guideDone = true
   }
 
@@ -498,7 +498,8 @@ function updateHud(sig: ReturnType<FaceTracker['sample']>, now: number): void {
       [
         `mode      ${state.mode}`,
         `smile     ${sig.smile.toFixed(3)}   jawOpen ${sig.jawOpen.toFixed(3)}`,
-        `rainRate  ${state.rainRate.toFixed(2)}   bars ${state.smileProgress.toFixed(2)}/${state.laughProgress.toFixed(2)}`,
+        `smileAmp  ${state.smileAmp.toFixed(2)}   smileHold ${state.smileProgress.toFixed(2)}   laughBar ${state.laughProgress.toFixed(2)}`,
+        `rainRate  ${state.rainRate.toFixed(2)}`,
         `fps       ${(1000 / emaFrame).toFixed(0)}   frame ${emaFrame.toFixed(1)}ms`,
         `detect    ${face.lastDetectMs.toFixed(1)}ms (${face.delegate}, 每 ${DETECT_INTERVAL_MS}ms)`,
         `assets    ${face.assetSource}   headRot ${face.headRotDeg.toFixed(1)}°`,
