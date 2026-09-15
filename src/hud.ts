@@ -28,6 +28,8 @@ export type StartState =
 const HOLD_DELAY = 350
 const HOLD_REPEAT = 500
 const GEAR_LONG_PRESS = 600
+/** 大笑条可见 scaleX 低于此视为收尾完成，避免无限接近 0 一直弱化微笑条 */
+const BAR_VISUAL_EPS = 0.02
 
 export class Hud {
   private root: HTMLElement
@@ -477,9 +479,17 @@ export class Hud {
     this.guideWrap.classList.remove('is-gone')
     this.guideText.classList.toggle('is-off', text === '')
     if (text !== '' && this.guideText.textContent !== text) this.guideText.textContent = text
-    this.smileFill.style.transform = `scaleX(${Math.max(0, Math.min(1, smile))})`
-    this.laughFill.style.transform = `scaleX(${Math.max(0, Math.min(1, laugh))})`
-    this.smileRow.classList.toggle('is-dim', smileStatus === 'dim')
+    const smileX = Math.max(0, Math.min(1, smile))
+    const laughX = Math.max(0, Math.min(1, laugh))
+    const smileTf = `scaleX(${smileX})`
+    const laughTf = `scaleX(${laughX})`
+    // 目标值没变就不要重写，避免每帧打断 fill 的 transform 过渡
+    if (this.smileFill.style.transform !== smileTf) this.smileFill.style.transform = smileTf
+    if (this.laughFill.style.transform !== laughTf) this.laughFill.style.transform = laughTf
+    // 大笑条回落是 CSS transform，不是状态平滑。微笑弱化跟到可见 scale 收完为止。
+    const laughShown = fillScaleX(this.laughFill)
+    const laughVisualTail = laughShown > Math.max(laughX, BAR_VISUAL_EPS)
+    this.smileRow.classList.toggle('is-dim', smileStatus === 'dim' || laughVisualTail)
     this.smileRow.classList.toggle('is-active', smileStatus === 'active')
     this.laughRow.classList.toggle('is-dim', laughStatus === 'dim')
     this.laughRow.classList.toggle('is-active', laughStatus === 'active')
@@ -519,4 +529,14 @@ export class Hud {
     this.debugEl.hidden = false
     this.debugEl.textContent = lines
   }
+}
+
+/** 读进度条当前可见的 scaleX（含 CSS transform 过渡中的中间值） */
+function fillScaleX(el: HTMLElement): number {
+  const t = getComputedStyle(el).transform
+  if (!t || t === 'none') return 0
+  const start = t.startsWith('matrix3d(') ? 9 : t.startsWith('matrix(') ? 7 : -1
+  if (start < 0) return 0
+  const a = parseFloat(t.slice(start))
+  return Number.isFinite(a) ? Math.abs(a) : 0
 }

@@ -367,10 +367,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.guide-bar-row {
-  transition: opacity 0.25s ease;
+  transition: opacity 0.2s ease;
 }
 
 .guide-bar-row.is-dim {
