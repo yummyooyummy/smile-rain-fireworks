@@ -262,7 +262,7 @@ export class FaceTracker {
 
   /**
    * 跑一次检测。w/h 是画布的 CSS 尺寸，用于把归一化坐标换成像素。
-   * 调用方负责降频（每 N 帧一次）。
+   * 调用方负责降频（墙钟间隔 + 视频 currentTime，不要按 rAF 帧计数）。
    */
   detect(video: HTMLVideoElement, w: number, h: number): void {
     if (!this.landmarker || video.readyState < 2) return

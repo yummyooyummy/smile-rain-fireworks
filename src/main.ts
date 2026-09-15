@@ -2,8 +2,8 @@
 //
 // 单一 requestAnimationFrame 循环，一帧内的顺序固定：
 //   降频检测 → 采样信号 → 状态机 → 发射器 → 物理与碰撞 → 绘制 → HUD → 档位采样
-// 检测每 3 帧跑一次（≈20 Hz），碰撞和渲染每帧跑——降频的是检测，不是碰撞，
-// 否则粒子会先穿进头里再被弹出来。
+// 检测按墙钟降到约 20 Hz，并跳过同一视频帧；碰撞和渲染每帧跑。
+// 不要按 rAF 帧计数降频——高刷新屏会把检测抬到远高于摄像头帧率。
 
 import { startCamera, stopCamera, CameraError_ } from './camera'
 import {
@@ -21,7 +21,7 @@ import { Effects } from './particles'
 import { PersonMask } from './segment'
 import { ExpressionState } from './state'
 
-const DETECT_EVERY = 3
+const DETECT_INTERVAL_MS = 50
 const MAX_DPR = 2
 
 const video = document.getElementById('cam') as HTMLVideoElement
@@ -72,6 +72,8 @@ let cameraOn = false
 let running = false
 let frame = 0
 let last = 0
+let lastDetectAt = 0
+let lastVideoTime = -1
 let w = 0
 let h = 0
 
@@ -116,6 +118,7 @@ document.addEventListener('visibilitychange', () => {
     running = false
   } else if (!running && !idlePaused && inScene) {
     face.resetClock()
+    resetDetectSchedule()
     last = 0
     startLoop()
   }
@@ -172,10 +175,10 @@ function applySegTier(immediate = false): void {
   if (hardOff) {
     segOffSince = 0
     segOnSince = 0
-    if (segOn) {
-      segOn = false
-      person.stop() // 硬关：连 Worker 一起收掉
-    }
+    segOn = false
+    // 即使已经因低档 pause（segOn 已是 false），手动关闭也必须清层、丢掉在飞任务。
+    // stop 可重复调用；宽限只服务档位抖动，硬关不能等。
+    person.stop()
     return
   }
   if (tierOff) {
@@ -267,6 +270,7 @@ async function connect(fromStart: boolean): Promise<void> {
   noFaceMs = 0
   hud.showPaused(false)
   face.resetClock()
+  resetDetectSchedule()
   connecting = false
   inScene = true
   hud.hideStart()
@@ -323,6 +327,7 @@ function resumeFromIdle(): void {
   noFaceMs = 0
   hud.showPaused(false)
   face.resetClock()
+  resetDetectSchedule()
   last = 0
   startLoop()
 }
@@ -342,6 +347,11 @@ function startLoop(): void {
   if (running) return
   running = true
   requestAnimationFrame(loop)
+}
+
+function resetDetectSchedule(): void {
+  lastDetectAt = 0
+  lastVideoTime = -1
 }
 
 // ---------- 档位自适应 ----------
@@ -398,9 +408,14 @@ function loop(now: number): void {
   last = now
   frame++
 
-  // 1. 降频检测（表情每 3 帧；人像分割每 4–6 帧，且在 Worker 里，不会卡这条线程）
-  if (cameraOn && face.ready && frame % DETECT_EVERY === 0) {
-    face.detect(video, w, h)
+  // 1. 降频检测（表情按 50 ms + 视频帧身份；人像分割每 4–6 帧，且在 Worker 里）
+  if (cameraOn && face.ready) {
+    const vt = video.currentTime
+    if (now - lastDetectAt >= DETECT_INTERVAL_MS && vt !== lastVideoTime) {
+      lastDetectAt = now
+      lastVideoTime = vt
+      face.detect(video, w, h)
+    }
   }
   if (segOn && frame % segEvery === 0) person.request(video, now)
   tickSegGrace(now)
@@ -484,7 +499,7 @@ function updateHud(sig: ReturnType<FaceTracker['sample']>, now: number): void {
         `smile     ${sig.smile.toFixed(3)}   jawOpen ${sig.jawOpen.toFixed(3)}`,
         `rainRate  ${state.rainRate.toFixed(2)}   bars ${state.smileProgress.toFixed(2)}/${state.laughProgress.toFixed(2)}`,
         `fps       ${(1000 / emaFrame).toFixed(0)}   frame ${emaFrame.toFixed(1)}ms`,
-        `detect    ${face.lastDetectMs.toFixed(1)}ms (${face.delegate}, 每 ${DETECT_EVERY} 帧)`,
+        `detect    ${face.lastDetectMs.toFixed(1)}ms (${face.delegate}, 每 ${DETECT_INTERVAL_MS}ms)`,
         `assets    ${face.assetSource}   headRot ${face.headRotDeg.toFixed(1)}°`,
         `person    ${segOn ? (person.active ? `on ${person.lastMs.toFixed(0)}ms (${person.delegate}, 每 ${segEvery} 帧) ${person.mw}x${person.mh}` : person.ready ? 'ready' : person.lastError ? `fail ${person.lastError}` : 'loading') : person.lastError ? `fail ${person.lastError}` : 'off'}`,
         `seg       ${segOn ? 'on' : 'off'}${segOffSince ? ' (等停 ' + ((SEG_OFF_GRACE_MS - (now - segOffSince)) / 1000).toFixed(1) + 's)' : ''}${segOnSince ? ' (等开 ' + ((SEG_ON_HOLD_MS - (now - segOnSince)) / 1000).toFixed(1) + 's)' : ''}`,

@@ -10,7 +10,8 @@
     "prebuild": "npm run prepare:assets",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "verify:head": "node scripts/verify-head-fit.mjs"
+    "verify:head": "node scripts/verify-head-fit.mjs",
+    "verify:seg": "node scripts/verify-seg-session.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "1.0.1"

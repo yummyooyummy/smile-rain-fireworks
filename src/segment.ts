@@ -39,9 +39,16 @@ export class PersonMask implements PersonCollider {
    * 和文档直觉相反，而且不同模型变体不一样。默认按实测取 0；运行中再用脸校验（见 detectPolarity）。
    */
   private personVal = 0
-  /** 每次 pause/stop 加一：晚到的 Worker 结果和 Image 解码回调看到号不对就丢掉，不会把旧遮罩重新挂上去 */
+  /**
+   * 会话代数。pause/stop 时加一。
+   * 异步任务必须在启动前捕获，完成时用捕获值与当前值比较——不能只在回调里读 this.gen。
+   */
   private gen = 0
   private paused = false
+  /** 已送给 Worker（或正在 createImageBitmap）的那一发的代数；-1 = 没有在飞任务 */
+  private inflightGen = -1
+  /** 同会话内后到的遮罩解码结果不得盖住先到的更新 */
+  private maskSeq = 0
   // 最近一帧的头部椭圆（屏幕坐标），给极性校验用
   private headCx = 0
   private headCy = 0
@@ -73,13 +80,24 @@ export class PersonMask implements PersonCollider {
 
   async init(): Promise<void> {
     if (this.worker) return
+    const gen = this.gen
     this.lastError = ''
     const wasmBase = (await exists(`${LOCAL_WASM_BASE}/vision_wasm_internal.js`)) ? LOCAL_WASM_BASE : CDN_WASM_BASE
     const modelUrl = (await exists(LOCAL_SEG_MODEL)) ? LOCAL_SEG_MODEL : CDN_SEG_MODEL
+    if (this.worker || gen !== this.gen) return
     const worker = new Worker(new URL('./segment.worker.ts', import.meta.url), { type: 'module' })
+    if (gen !== this.gen) {
+      worker.terminate()
+      return
+    }
     this.worker = worker
-    worker.onmessage = (e) => this.onMessage(e.data)
+    // 用实例身份丢掉已 terminate 的 Worker 的排队消息，避免旧 ready/error 作用到新会话
+    worker.onmessage = (e) => {
+      if (this.worker !== worker) return
+      this.onMessage(e.data)
+    }
     worker.onerror = (e) => {
+      if (this.worker !== worker) return
       this.lastError = `worker: ${e.message}`.slice(0, 120)
       this.stop()
     }
@@ -95,8 +113,9 @@ export class PersonMask implements PersonCollider {
       this.ready = true
       this.delegate = m.delegate as 'GPU' | 'CPU'
     } else if (m.type === 'mask') {
-      this.busy = false
-      if (this.paused) return // 暂停前已送出的那一帧回来了：丢掉
+      // 先按送出时的代数释放 busy，过期结果也要让出门；再决定是否应用
+      this.releaseInflight(m.gen as number)
+      if (m.gen !== this.gen || this.paused) return
       this.data = m.data as Uint8Array
       this.mw = m.w as number
       this.mh = m.h as number
@@ -107,8 +126,10 @@ export class PersonMask implements PersonCollider {
       this.detectPolarity()
       this.updateCssMask()
     } else if (m.type === 'skip') {
-      this.busy = false
+      this.releaseInflight(m.gen as number)
     } else if (m.type === 'error') {
+      if (typeof m.gen === 'number') this.releaseInflight(m.gen)
+      if (typeof m.gen === 'number' && m.gen !== this.gen) return
       // 推理层出错就整个关掉，退回椭圆——绝不让 demo 因为加分项白屏
       this.lastError = String(m.message).slice(0, 120)
       this.stop()
@@ -127,12 +148,34 @@ export class PersonMask implements PersonCollider {
 
   /** 每隔几帧调一次；上一帧还没回来就跳过，绝不排队。 */
   request(video: HTMLVideoElement, ts: number): void {
-    if (!this.ready || this.busy || !this.worker || video.readyState < 2) return
+    if (!this.ready || this.busy || !this.worker || this.paused || video.readyState < 2) return
+    const gen = this.gen
+    const worker = this.worker
     this.busy = true
+    this.inflightGen = gen
     createImageBitmap(video, { resizeWidth: SEND_W, resizeHeight: SEND_H, resizeQuality: 'low' })
-      .then((bmp) => this.worker?.postMessage({ type: 'seg', bmp, ts }, [bmp]))
+      .then((bmp) => {
+        // 主线程仍持有 bmp。失效则在这里 close；一旦 transfer 给 Worker，就不再 close。
+        if (gen !== this.gen || this.paused || this.worker !== worker) {
+          bmp.close()
+          this.releaseInflight(gen)
+          return
+        }
+        try {
+          worker.postMessage({ type: 'seg', bmp, ts, gen }, [bmp])
+        } catch (err) {
+          try {
+            bmp.close()
+          } catch {
+            /* 若已经 transfer 成功，close 可能抛错，忽略 */
+          }
+          this.releaseInflight(gen)
+          this.lastError = String(err instanceof Error ? err.message : err).slice(0, 120)
+        }
+      })
       .catch((err) => {
-        this.busy = false
+        this.releaseInflight(gen)
+        if (gen !== this.gen) return
         this.lastError = String(err instanceof Error ? err.message : err).slice(0, 120)
       })
   }
@@ -251,8 +294,9 @@ export class PersonMask implements PersonCollider {
     // 整个人像层闪一下。先用 Image 解码完再换，就没有这一帧。
     const im = new Image()
     const gen = this.gen
+    const seq = ++this.maskSeq
     im.onload = () => {
-      if (gen !== this.gen || this.paused) return // 解码期间已经 pause/stop 了
+      if (gen !== this.gen || this.paused || seq !== this.maskSeq) return
       const url = `url(${dataUrl})`
       const st = this.clone.style
       st.maskImage = url
@@ -362,13 +406,13 @@ export class PersonMask implements PersonCollider {
    * 设备在降档线附近反复横跳时，这个代价本身就会再拖一次帧。
    */
   pause(): void {
-    this.gen++
+    this.bumpSession()
     this.paused = true
-    this.busy = false
     this.data = null
     this.lastMaskAt = 0
     this.hz = 0
-    this.clone.hidden = true
+    this.hideAndClearMask()
+    // 不把 busy 清掉：Worker 里那一发还在跑。清了就会在 resume 后立刻再送，造成积压。
   }
 
   /** 恢复：Worker 还在就直接继续；人像层等第一张有效遮罩到了才显示（见 updateCssMask） */
@@ -378,13 +422,15 @@ export class PersonMask implements PersonCollider {
     void this.init()
   }
 
+  /** 可重复调用。已 pause 后再关，也必须把显示层和 CSS 遮罩清掉。 */
   stop(): void {
-    this.gen++
-    this.paused = false
-    this.worker?.terminate()
+    this.bumpSession()
+    this.paused = true
+    this.busy = false
+    this.inflightGen = -1
+    const worker = this.worker
     this.worker = null
     this.ready = false
-    this.busy = false
     // 下次可能换模型（本地 / CDN 变体极性不同），极性从头判
     this.personVal = 0
     this.polarityLocked = false
@@ -392,6 +438,27 @@ export class PersonMask implements PersonCollider {
     this.data = null
     this.lastMaskAt = 0
     this.hz = 0
+    this.hideAndClearMask()
+    if (worker) {
+      worker.onmessage = null
+      worker.onerror = null
+      worker.terminate()
+    }
+  }
+
+  /** 作废尚未完成的会话；不中断已在 Worker 里跑的推理，也不提前清 busy。 */
+  private bumpSession(): void {
+    this.gen++
+    this.maskSeq++
+  }
+
+  private releaseInflight(gen: number): void {
+    if (this.inflightGen !== gen) return
+    this.inflightGen = -1
+    this.busy = false
+  }
+
+  private hideAndClearMask(): void {
     this.clone.hidden = true
     this.clone.style.maskImage = ''
     this.clone.style.webkitMaskImage = ''

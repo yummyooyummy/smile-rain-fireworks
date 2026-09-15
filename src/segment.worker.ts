@@ -5,7 +5,7 @@
 import { FilesetResolver, ImageSegmenter } from '@mediapipe/tasks-vision'
 
 type InitMsg = { type: 'init'; wasmBase: string; modelUrl: string }
-type SegMsg = { type: 'seg'; bmp: ImageBitmap; ts: number }
+type SegMsg = { type: 'seg'; bmp: ImageBitmap; ts: number; gen: number }
 
 let seg: ImageSegmenter | null = null
 
@@ -56,28 +56,38 @@ async function init(m: InitMsg): Promise<void> {
 }
 
 function segment(m: SegMsg): void {
-  if (!seg) {
-    m.bmp.close()
-    self.postMessage({ type: 'skip' })
-    return
+  let res: ReturnType<ImageSegmenter['segmentForVideo']> | null = null
+  try {
+    if (!seg) {
+      self.postMessage({ type: 'skip', gen: m.gen })
+      return
+    }
+    const t0 = performance.now()
+    res = seg.segmentForVideo(m.bmp, m.ts)
+    const mask = res.categoryMask
+    if (!mask) {
+      self.postMessage({ type: 'skip', gen: m.gen })
+      return
+    }
+    // getAsUint8Array 返回的是 MediaPipe 内部缓冲的视图，close() 之后就失效，必须拷一份再转移
+    const data = mask.getAsUint8Array().slice()
+    const w = mask.width
+    const h = mask.height
+    const ms = performance.now() - t0
+    // gen 原样带回：主线程用送出时捕获的代数丢弃过期结果，不中断这次推理
+    ;(self as unknown as Worker).postMessage({ type: 'mask', data, w, h, ms, gen: m.gen }, [data.buffer])
+  } finally {
+    try {
+      res?.close()
+    } catch {
+      /* 未创建或已经 close */
+    }
+    try {
+      m.bmp.close()
+    } catch {
+      /* 已经 close */
+    }
   }
-  const t0 = performance.now()
-  const res = seg.segmentForVideo(m.bmp, m.ts)
-  const mask = res.categoryMask
-  if (!mask) {
-    res.close()
-    m.bmp.close()
-    self.postMessage({ type: 'skip' })
-    return
-  }
-  // getAsUint8Array 返回的是 MediaPipe 内部缓冲的视图，close() 之后就失效，必须拷一份再转移
-  const data = mask.getAsUint8Array().slice()
-  const w = mask.width
-  const h = mask.height
-  res.close()
-  m.bmp.close()
-  const ms = performance.now() - t0
-  ;(self as unknown as Worker).postMessage({ type: 'mask', data, w, h, ms }, [data.buffer])
 }
 
 self.onmessage = (e: MessageEvent<InitMsg | SegMsg>) => {
@@ -87,7 +97,7 @@ self.onmessage = (e: MessageEvent<InitMsg | SegMsg>) => {
     try {
       segment(e.data)
     } catch (err) {
-      self.postMessage({ type: 'error', message: String(err) })
+      self.postMessage({ type: 'error', message: String(err), gen: e.data.gen })
     }
   }
 }
