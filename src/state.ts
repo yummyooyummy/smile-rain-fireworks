@@ -269,14 +269,16 @@ export class ExpressionState {
     const diff = target - this.rainRate
     this.rainRate += Math.abs(diff) <= speed ? diff : Math.sign(diff) * speed
 
-    // ---- 两根进度条：弱化由 mode / 候选意图控制，不靠进度是否归零 ----
+    // ---- 两根进度条：先定交互意图，再写进度。弱化跟意图走，不跟满额走 ----
+    // 大笑优先。idle 微笑条只反映 300 ms 进入计时，不用 smile/阈值模拟强度——
+    // 突然大笑时 smile 会先过线，模拟值会瞬间变成 1，条先闪满再变淡。
     const laughCandidate = this.mode !== 'laughing' && this.isLaughing(sig)
-    this.smileStatus =
-      this.mode === 'laughing' || laughCandidate ? 'dim' : this.mode === 'smiling' ? 'active' : 'charge'
-    this.laughStatus = this.mode === 'laughing' ? 'active' : this.mode === 'smiling' ? 'dim' : 'charge'
-    // 大笑期间不累计、不显示满格微笑进度；退出时已清计时，idle 用当前笑值重新充电。
+    const laughIntent = this.mode === 'laughing' || laughCandidate
+    const smileIntent = !laughIntent && (this.mode === 'smiling' || this.tSmileEnter > 0)
+    this.smileStatus = laughIntent ? 'dim' : this.mode === 'smiling' ? 'active' : 'charge'
+    this.laughStatus = this.mode === 'laughing' ? 'active' : smileIntent ? 'dim' : 'charge'
     this.smileProgress =
-      this.mode === 'smiling' ? 1 : this.mode === 'laughing' ? 0 : Math.min(1, sig.smile / c.smileEnter)
+      this.mode === 'smiling' ? 1 : this.mode === 'laughing' ? 0 : Math.min(1, this.tSmileEnter / HOLD_SMILE_ENTER)
     this.laughProgress = this.mode === 'laughing' ? 1 : this.laughGate(sig)
   }
 

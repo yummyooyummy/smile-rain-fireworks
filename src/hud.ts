@@ -30,6 +30,8 @@ const HOLD_REPEAT = 500
 const GEAR_LONG_PRESS = 600
 /** 大笑条可见 scaleX 低于此视为收尾完成，避免无限接近 0 一直弱化微笑条 */
 const BAR_VISUAL_EPS = 0.02
+/** 切到大笑时，微笑条停在切换前的显示进度再淡出；不是业务计时 */
+const SMILE_FADE_MS = 150
 
 export class Hud {
   private root: HTMLElement
@@ -71,6 +73,9 @@ export class Hud {
   private toastTimer = 0
   private startHideTimer = 0
   private guideHideTimer = 0
+  /** 微笑条淡出快照：只影响显示，不回写状态机 */
+  private smileFadeUntil = 0
+  private smileFadeHold = 0
 
   constructor(root: HTMLElement, cb: HudCallbacks, person: PersonMask) {
     this.root = root
@@ -461,6 +466,7 @@ export class Hud {
     laughStatus: 'charge' | 'active' | 'dim' = 'charge',
   ): void {
     if (text === null) {
+      this.smileFadeUntil = 0
       if (this.guideWrap.hidden || this.guideHideTimer) return
       this.guideWrap.classList.add('is-gone')
       this.guideHideTimer = window.setTimeout(() => {
@@ -478,8 +484,21 @@ export class Hud {
     this.guideWrap.classList.remove('is-gone')
     this.guideText.classList.toggle('is-off', text === '')
     if (text !== '' && this.guideText.textContent !== text) this.guideText.textContent = text
-    const smileX = Math.max(0, Math.min(1, smile))
     const laughX = Math.max(0, Math.min(1, laugh))
+    let smileX = Math.max(0, Math.min(1, smile))
+    const now = performance.now()
+    if (smileStatus === 'dim') {
+      if (this.smileFadeUntil === 0) {
+        const shown = Math.max(smileX, fillScaleX(this.smileFill))
+        if (shown > BAR_VISUAL_EPS) {
+          this.smileFadeHold = shown
+          this.smileFadeUntil = now + SMILE_FADE_MS
+        }
+      }
+      if (now < this.smileFadeUntil) smileX = this.smileFadeHold
+    } else {
+      this.smileFadeUntil = 0
+    }
     const smileTf = `scaleX(${smileX})`
     const laughTf = `scaleX(${laughX})`
     // 目标值没变就不要重写，避免每帧打断 fill 的 transform 过渡

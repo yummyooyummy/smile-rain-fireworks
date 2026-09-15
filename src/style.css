@@ -367,7 +367,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.15s ease;
 }
 
 .guide-bar-row.is-dim {
