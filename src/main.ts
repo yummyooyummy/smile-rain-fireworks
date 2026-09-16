@@ -511,6 +511,7 @@ function updateHud(sig: ReturnType<FaceTracker['sample']>, now: number): void {
         `occlude   ${segOn && person.active ? 'mask' : cameraOn ? 'ellipse' : '-'}   maskAge ${person.active ? (now - person.lastMaskAt).toFixed(0) : '-'}ms   segHz ${person.hz.toFixed(1)}${segOffSince ? '   (宽限中)' : ''}`,
         `tier      ${tier.name}   rain ${s.rainAlive}   spark ${s.sparkAlive}   rocket ${s.rocketAlive}`,
         `collide   ${s.collisions}/frame`,
+        `bars      ${state.smileStatus}/${state.laughStatus}  ${hud.barsDebug()}`,
       ].join('\n'),
     )
   } else {

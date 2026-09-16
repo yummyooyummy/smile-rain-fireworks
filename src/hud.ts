@@ -69,9 +69,8 @@ export class Hud {
   private toastTimer = 0
   private startHideTimer = 0
   private guideHideTimer = 0
-  /** 切入大笑时冻结当时的微笑幅度，弱化期间一直用；只影响显示 */
-  private smileFadeUntil = 0
-  private smileFadeHold = 0
+  /** 上一帧画上去的微笑条宽度，用来判断要不要打断 CSS 过渡 */
+  private smileFillX = -1
 
   constructor(root: HTMLElement, cb: HudCallbacks, person: PersonMask) {
     this.root = root
@@ -462,7 +461,7 @@ export class Hud {
     laughStatus: 'charge' | 'active' | 'dim' = 'charge',
   ): void {
     if (text === null) {
-      this.smileFadeUntil = 0
+      this.smileFillX = -1
       if (this.guideWrap.hidden || this.guideHideTimer) return
       this.guideWrap.classList.add('is-gone')
       this.guideHideTimer = window.setTimeout(() => {
@@ -481,31 +480,46 @@ export class Hud {
     this.guideText.classList.toggle('is-off', text === '')
     if (text !== '' && this.guideText.textContent !== text) this.guideText.textContent = text
     const laughX = Math.max(0, Math.min(1, laugh))
-    let smileX = Math.max(0, Math.min(1, smile))
+    const smileX = Math.max(0, Math.min(1, smile))
     const dim = smileStatus === 'dim'
-    if (dim) {
-      // 整段弱化都钉在切入时的幅度，不跟业务清零/满格走
-      if (this.smileFadeUntil === 0) {
-        this.smileFadeHold = smileX
-        this.smileFadeUntil = 1
-      }
-      smileX = this.smileFadeHold
-    } else if (this.smileFadeUntil !== 0) {
-      this.smileFadeUntil = 0
-      this.smileFill.style.transition = 'none'
-      this.smileFill.style.transform = `scaleX(${smileX})`
-      void this.smileFill.offsetWidth
-      this.smileFill.style.transition = ''
-    }
+    const active = smileStatus === 'active'
+    const laughDim = laughStatus === 'dim'
+    const laughActive = laughStatus === 'active'
     const smileTf = `scaleX(${smileX})`
     const laughTf = `scaleX(${laughX})`
-    // 目标值没变就不要重写，避免每帧打断 fill 的 transform 过渡
-    if (this.smileFill.style.transform !== smileTf) this.smileFill.style.transform = smileTf
+    // 弱化：class 之外再写一份 inline opacity。inline 样式优先级最高，
+    // 不受任何后加的 CSS 规则影响；过渡仍由 .guide-bar-row 的 transition 负责。
+    // 两根条走完全相同的路径，不能一根靠 class、一根靠别的。
+    this.setRowState(this.smileRow, dim, active)
+    this.setRowState(this.laughRow, laughDim, laughActive)
+    if (this.smileFillX !== smileX) {
+      if (smileX === 0) {
+        this.smileFill.style.transition = 'none'
+        this.smileFill.style.transform = smileTf
+      } else {
+        if (this.smileFillX <= 0) this.smileFill.style.transition = ''
+        this.smileFill.style.transform = smileTf
+      }
+      this.smileFillX = smileX
+    }
     if (this.laughFill.style.transform !== laughTf) this.laughFill.style.transform = laughTf
-    this.smileRow.classList.toggle('is-dim', dim)
-    this.smileRow.classList.toggle('is-active', smileStatus === 'active')
-    this.laughRow.classList.toggle('is-dim', laughStatus === 'dim')
-    this.laughRow.classList.toggle('is-active', laughStatus === 'active')
+  }
+
+  private static readonly DIM_OPACITY = '0.35'
+
+  private setRowState(row: HTMLElement, dim: boolean, active: boolean): void {
+    if (row.classList.contains('is-dim') !== dim) row.classList.toggle('is-dim', dim)
+    if (row.classList.contains('is-active') !== active) row.classList.toggle('is-active', active)
+    const want = dim ? Hud.DIM_OPACITY : ''
+    if (row.style.opacity !== want) row.style.opacity = want
+  }
+
+  /** 调试面板用：两根条此刻真实的 class 与计算后透明度，用来区分「状态没给」和「样式没生效」 */
+  barsDebug(): string {
+    const s = this.smileRow
+    const l = this.laughRow
+    const cls = (el: HTMLElement) => el.className.replace('guide-bar-row', '').trim() || '-'
+    return `smile[${cls(s)} op=${getComputedStyle(s).opacity}]  laugh[${cls(l)} op=${getComputedStyle(l).opacity}]`
   }
 
   // ---------- 提示 ----------
