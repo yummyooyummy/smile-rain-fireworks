@@ -11,3 +11,6 @@ vite.config.ts.timestamp-*
 
 # Claude/Cursor 输出目录，不纳入仓库
 Claude outputs/
+
+# 设计参考里的个人照片，不纳入仓库
+/process/design/WechatIMG108.jpg

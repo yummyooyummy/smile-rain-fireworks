@@ -46,7 +46,7 @@ npm run dev
 
 ## 交给 Cursor 的活儿
 
-打开 Cursor，让它读 `TODO-for-cursor.md`，按 P0 → P1 → P2 顺序做。
+打开 Cursor，让它读 `process/TODO-for-cursor.md`，按 P0 → P1 → P2 顺序做。
 里面写清了抽屉要接的接口（`window.__fx`）、不许碰的模块、以及不要顺手实现的东西。
 `CLAUDE.md` 是给它的项目约束，每次动手前让它先复述相关条款。
 

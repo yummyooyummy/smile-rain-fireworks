@@ -258,7 +258,7 @@ One Euro 去抖），但这些改进**评审是看不见的**——他只会看�
 
 Claude Design 导出的 **Project HTML** 里有一个 `笑雨烟花 AR Demo.dc.html`——20 块画板全在这一个文件里
 （`id="S1-a"` … `"S4-b"`、`"D-1"`…`"D-3"` 桌面、`"C-1"` 组件表），每块都是完整的 HTML + 内联 CSS。
-把它放到 `~/笑雨烟花/design/` 下就行，**不需要截图**，Cursor 直接读源码比看图准。
+把它放到 `process/design/` 下就行，**不需要截图**，Cursor 直接读源码比看图准。
 
 ```
 design/笑雨烟花 AR Demo.dc.html 是 Claude Design 出的高保真界面，20 块画板全在里面，

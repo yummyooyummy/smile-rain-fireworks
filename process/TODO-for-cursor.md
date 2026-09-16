@@ -1,3 +1,5 @@
+历史任务清单，仅作过程记录；当前实现与已知限制以 README 为准。
+
 # 交给 Cursor 的任务清单
 
 核心引擎（`face.ts` / `state.ts` / `particles.ts` / `main.ts`）已经写好并跑通，**不要重构它们**。
