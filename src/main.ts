@@ -277,6 +277,7 @@ async function connect(fromStart: boolean): Promise<void> {
   hud.showControls({ camera: true, clean: flags.clean })
   applySegTier(true) // 进场：分割立刻开，不等稳定期
   startLoop()
+  window.dispatchEvent(new CustomEvent('scene-enter')) // 抽屉的 ?mode=pro 自动展开等这个
 }
 
 /** 失败不跳页：开始页按钮自己变成「摄像头未开启，直接开始」；主画面里则横幅按钮复位。 */
@@ -341,6 +342,7 @@ function enterManualMode(): void {
   hud.showPaused(false)
   hud.showControls({ camera: false, clean: flags.clean })
   startLoop()
+  window.dispatchEvent(new CustomEvent('scene-enter'))
 }
 
 function startLoop(): void {
@@ -500,7 +502,7 @@ function updateHud(sig: ReturnType<FaceTracker['sample']>, now: number): void {
         `smile     ${sig.smile.toFixed(3)}   jawOpen ${sig.jawOpen.toFixed(3)}`,
         `smileAmp  ${state.smileAmp.toFixed(2)}   smileHold ${state.smileProgress.toFixed(2)}   laughBar ${state.laughProgress.toFixed(2)}`,
         `rainRate  ${state.rainRate.toFixed(2)}`,
-        `fps       ${(1000 / emaFrame).toFixed(0)}   frame ${emaFrame.toFixed(1)}ms`,
+        `frame     ${emaFrame.toFixed(1)}ms 回调EMA (1000/EMA=${(1000 / emaFrame).toFixed(0)}, 非显示帧率)`,
         `detect    ${face.lastDetectMs.toFixed(1)}ms (${face.delegate}, 每 ${DETECT_INTERVAL_MS}ms)`,
         `assets    ${face.assetSource}   headRot ${face.headRotDeg.toFixed(1)}°`,
         `person    ${segOn ? (person.active ? `on ${person.lastMs.toFixed(0)}ms (${person.delegate}, 每 ${segEvery} 帧) ${person.mw}x${person.mh}` : person.ready ? 'ready' : person.lastError ? `fail ${person.lastError}` : 'loading') : person.lastError ? `fail ${person.lastError}` : 'off'}`,

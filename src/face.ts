@@ -221,7 +221,8 @@ export class FaceTracker {
         runningMode: 'VIDEO' as const,
         numFaces: 1,
         outputFaceBlendshapes: true,
-        outputFacialTransformationMatrixes: true,
+        // 头部姿态由 36 点 PCA 自己算（见下），不用模型的变换矩阵——开着只是每帧白算一个 4×4
+        outputFacialTransformationMatrixes: false,
       }) as const
 
     try {

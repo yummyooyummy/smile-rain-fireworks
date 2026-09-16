@@ -355,4 +355,5 @@ function openWhenReady(frames = 0): void {
   if (frames < 60) requestAnimationFrame(() => openWhenReady(frames + 1))
 }
 
-if (readFlags().pro) openWhenReady()
+// 等进入主画面再自动展开：在开始页就弹出来会把「开始」按钮盖住（手机上整个盖满）
+if (readFlags().pro) window.addEventListener('scene-enter', () => openWhenReady(), { once: true })
