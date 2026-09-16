@@ -106,8 +106,47 @@ Object.assign(window, {
     setConfig: (next: EffectConfig) => applyConfig(next),
     getTier: () => effects.currentTier.name,
     person, // 调试用：可以从控制台喂一张假遮罩验证碰撞与遮挡链路
+    // 调试用：没有摄像头时从控制台喂假表情信号，驱动真实的状态机 + HUD（进度条 / 弱化）。
+    // __fx.sim(0.5, 0)  微笑；__fx.sim(0.5, 0.4) 大笑；__fx.simOff() 停。只在手动模式（无摄像头）下生效。
+    // ?sim=1 会在进入手动模式后自动循环「微笑 → 大笑 → 微笑 → 待机 → 突然大笑 → 待机」，
+    // 用来在任何设备上不靠摄像头检查两根进度条的进度与弱化。
+    sim: (smile: number, jaw: number) => {
+      simOn = true
+      simSmile = smile
+      simJaw = jaw
+    },
+    simOff: () => {
+      simOn = false
+    },
   },
 })
+let simOn = false
+let simSmile = 0
+let simJaw = 0
+const SIM_SCRIPT: [number, number, number][] = [
+  [0.5, 0, 2000],
+  [0.5, 0.45, 2000],
+  [0.5, 0, 2500],
+  [0.05, 0, 2500],
+  [0.5, 0.45, 1500],
+  [0.05, 0, 3000],
+]
+if (new URLSearchParams(location.search).get('sim') === '1') {
+  window.addEventListener('scene-enter', () => {
+    if (cameraOn) return
+    let i = 0
+    const step = () => {
+      if (cameraOn) return
+      const [s, j, ms] = SIM_SCRIPT[i % SIM_SCRIPT.length]
+      simOn = true
+      simSmile = s
+      simJaw = j
+      i++
+      window.setTimeout(step, ms)
+    }
+    step()
+  })
+}
 
 resize()
 window.addEventListener('resize', resize)
@@ -424,6 +463,12 @@ function loop(now: number): void {
 
   // 2. 信号采样（含 EMA 平滑与头部插值）
   const sig = face.sample(dt)
+  if (simOn && !cameraOn) {
+    // 假信号走和真信号一样的 EMA：直接写 raw 会被 sample 覆盖，所以在这里对 sig 做同样的平滑
+    sig.smile += (simSmile - sig.smile) * 0.35
+    sig.jawOpen += (simJaw - sig.jawOpen) * 0.35
+    sig.faceOk = true
+  }
 
   // 3. 状态机
   state.update(sig, dt)
@@ -473,17 +518,18 @@ function updateHud(sig: ReturnType<FaceTracker['sample']>, now: number): void {
   const lp = state.laughProgress
   const ss = state.smileStatus
   const ls = state.laughStatus
-  if (!cfg.showGuide || flags.clean || !cameraOn) {
+  const smileDimmed = state.smileDimmed
+  if (!cfg.showGuide || flags.clean || (!cameraOn && !simOn)) {
     hud.setGuide(null, 0, 0)
   } else if (guideDone) {
-    hud.setGuide('', amp, lp, ss, ls)
+    hud.setGuide('', amp, lp, ss, ls, smileDimmed)
   } else if (!state.reachedSmile) {
-    hud.setGuide(copy.guide.step1, amp, lp, ss, ls)
+    hud.setGuide(copy.guide.step1, amp, lp, ss, ls, smileDimmed)
   } else if (!state.reachedLaugh) {
-    hud.setGuide(copy.guide.step2, amp, lp, ss, ls)
+    hud.setGuide(copy.guide.step2, amp, lp, ss, ls, smileDimmed)
   } else {
     if (!guideDoneAt) guideDoneAt = now
-    hud.setGuide(copy.guide.done, amp, lp, ss, ls)
+    hud.setGuide(copy.guide.done, amp, lp, ss, ls, smileDimmed)
     if (now - guideDoneAt > 2000) guideDone = true
   }
 

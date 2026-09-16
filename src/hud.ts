@@ -69,8 +69,9 @@ export class Hud {
   private toastTimer = 0
   private startHideTimer = 0
   private guideHideTimer = 0
-  /** 上一帧画上去的微笑条宽度，用来判断要不要打断 CSS 过渡 */
+  /** 上一帧画上去的填充宽度，用来判断要不要打断 CSS 过渡 */
   private smileFillX = -1
+  private laughFillX = -1
 
   constructor(root: HTMLElement, cb: HudCallbacks, person: PersonMask) {
     this.root = root
@@ -459,9 +460,12 @@ export class Hud {
     laugh: number,
     smileStatus: 'charge' | 'active' | 'dim' = 'charge',
     laughStatus: 'charge' | 'active' | 'dim' = 'charge',
+    /** 微笑整行弱化。只由真实 Laughing（及已有候选）推导，与幅度无关。 */
+    smileDimmed = false,
   ): void {
     if (text === null) {
       this.smileFillX = -1
+      this.laughFillX = -1
       if (this.guideWrap.hidden || this.guideHideTimer) return
       this.guideWrap.classList.add('is-gone')
       this.guideHideTimer = window.setTimeout(() => {
@@ -481,17 +485,9 @@ export class Hud {
     if (text !== '' && this.guideText.textContent !== text) this.guideText.textContent = text
     const laughX = Math.max(0, Math.min(1, laugh))
     const smileX = Math.max(0, Math.min(1, smile))
-    const dim = smileStatus === 'dim'
-    const active = smileStatus === 'active'
-    const laughDim = laughStatus === 'dim'
-    const laughActive = laughStatus === 'active'
     const smileTf = `scaleX(${smileX})`
     const laughTf = `scaleX(${laughX})`
-    // 弱化：class 之外再写一份 inline opacity。inline 样式优先级最高，
-    // 不受任何后加的 CSS 规则影响；过渡仍由 .guide-bar-row 的 transition 负责。
-    // 两根条走完全相同的路径，不能一根靠 class、一根靠别的。
-    this.setRowState(this.smileRow, dim, active)
-    this.setRowState(this.laughRow, laughDim, laughActive)
+    // 1) 进度填充先写。transform 过渡只动 <i>，不准回头改行的 opacity。
     if (this.smileFillX !== smileX) {
       if (smileX === 0) {
         this.smileFill.style.transition = 'none'
@@ -502,15 +498,28 @@ export class Hud {
       }
       this.smileFillX = smileX
     }
-    if (this.laughFill.style.transform !== laughTf) this.laughFill.style.transform = laughTf
+    if (this.laughFillX !== laughX) {
+      if (laughX === 0) {
+        this.laughFill.style.transition = 'none'
+        this.laughFill.style.transform = laughTf
+      } else {
+        if (this.laughFillX <= 0) this.laughFill.style.transition = ''
+        this.laughFill.style.transform = laughTf
+      }
+      this.laughFillX = laughX
+    }
+    // 2) 整行弱化后写，且只认 smileDimmed。不看幅度是否为 0、大笑条是否满格。
+    // class 与 inline 同一处、同一标志；进度为 0 时标志变化也必须落到 DOM。
+    this.writeRowFade(this.smileRow, smileDimmed, smileStatus === 'active')
+    this.writeRowFade(this.laughRow, laughStatus === 'dim', laughStatus === 'active')
   }
 
   private static readonly DIM_OPACITY = '0.35'
 
-  private setRowState(row: HTMLElement, dim: boolean, active: boolean): void {
+  private writeRowFade(row: HTMLElement, dim: boolean, active: boolean): void {
     if (row.classList.contains('is-dim') !== dim) row.classList.toggle('is-dim', dim)
     if (row.classList.contains('is-active') !== active) row.classList.toggle('is-active', active)
-    const want = dim ? Hud.DIM_OPACITY : ''
+    const want = dim ? Hud.DIM_OPACITY : '1'
     if (row.style.opacity !== want) row.style.opacity = want
   }
 

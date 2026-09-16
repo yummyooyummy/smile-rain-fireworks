@@ -36,12 +36,10 @@ const RESIDUE_BURST_EVERY = 0.5
 
 /**
  * 显示层幅度 = clamp(smile / smileEnter)，和 README 的口径一致；只影响显示，不改阈值、EMA、计时。
- * Laughing 与其后的情绪残留期（烟花还在放）都直接 0。残留期也归零是因为：
- * 自然的大笑是「哈—哈—哈」断续的，jawOpen 会在退出线附近来回，状态机在 Laughing / Idle 间快速切换；
- * 若微笑条跟着每次 Idle 立刻亮回来，用户看到的就是烟花还在放、微笑条却在闪。
+ * 仅在正式 Laughing 时归零。烟花余韵（residue）不挡条。
  */
-export function smileBarAmp(mode: Mode, smile: number, smileEnter: number, afterglow = false): number {
-  if (mode === 'laughing' || afterglow) return 0
+export function smileBarAmp(mode: Mode, smile: number, smileEnter: number): number {
+  if (mode === 'laughing') return 0
   return Math.min(1, Math.max(0, smile / (smileEnter || 1)))
 }
 
@@ -63,12 +61,14 @@ export class ExpressionState {
 
   /** 业务：Idle 时微笑进入候选计时 0–1，Smiling=1，Laughing=0。不画条。 */
   smileProgress = 0
-  /** 显示：见 smileBarAmp；Laughing 及其后的情绪残留期恒为 0 */
+  /** 显示：见 smileBarAmp；只在 Laughing 归零，余韵不挡 */
   smileAmp = 0
   laughProgress = 0
   /** 进度条语义：charge = 未触发；active = 已触发；dim = 被另一根条的意图压住 */
   smileStatus: 'charge' | 'active' | 'dim' = 'charge'
   laughStatus: 'charge' | 'active' | 'dim' = 'charge'
+  /** 微笑条弱化：正式 Laughing（含 400ms 退出防抖）、大笑候选、或烟花余韵期。只管透明度，不管幅度。 */
+  smileDimmed = false
   private tSmileHold = 0
 
   private get smileExit(): number {
@@ -125,6 +125,7 @@ export class ExpressionState {
     this.laughProgress = 0
     this.smileStatus = 'charge'
     this.laughStatus = 'charge'
+    this.smileDimmed = false
     this.resetGuide()
     this.tSmileEnter = 0
     this.tSmileExit = 0
@@ -282,23 +283,23 @@ export class ExpressionState {
     const diff = target - this.rainRate
     this.rainRate += Math.abs(diff) <= speed ? diff : Math.sign(diff) * speed
 
-    // ---- 两根进度条：显示与触发分开。弱化跟意图走 ----
-    // 微笑条画当前幅度；进入计时仍走 tSmileEnter，不画条、不改触发。
-    // 进度与透明度分开：Laughing 时 smileAmp=0，smileStatus 仍为 dim
-    //（#smileRow.is-dim → opacity 0.35）。不锁 smileX、不缓存旧幅度。
-    // 情绪残留期（离开 Laughing 后 1.5 s，烟花逐渐稀疏）视觉上仍算「在大笑」：
-    // 大笑条随残留衰减、微笑条保持弱化且清零。否则断续的笑会让微笑条在烟花中间闪亮。
-    const afterglow = this.residue > 0
-    const laughCandidate = this.mode !== 'laughing' && this.isLaughing(sig)
-    const laughIntent = this.mode === 'laughing' || laughCandidate || afterglow
-    const smileIntent = !laughIntent && (this.mode === 'smiling' || this.tSmileEnter > 0)
-    this.smileStatus = laughIntent ? 'dim' : this.mode === 'smiling' ? 'active' : 'charge'
-    this.laughStatus = this.mode === 'laughing' || afterglow ? 'active' : smileIntent ? 'dim' : 'charge'
-    this.smileAmp = smileBarAmp(this.mode, sig.smile, this.cfg.smileEnter, afterglow)
+    // ---- 两根进度条：幅度 / 弱化 / 余韵三条分开 ----
+    // 幅度：当前信号映射（Laughing 时微笑幅度仍为 0，这是已验收约束，不是弱化手段）。
+    // 弱化：只由正式 Laughing（含 400ms 退出防抖）和大笑候选驱动。
+    // 余韵：只发烟花，不改条的幅度或透明度。
+    const laughingNow = this.mode === 'laughing'
+    const laughCandidate = !laughingNow && this.isLaughing(sig)
+    // 弱化多盖住一段「烟花余韵」（residue，离开 Laughing 后 1.5 s 内烟花还在放）：
+    // 用户看到的是「烟花还在放、微笑条却亮了」。只动透明度——幅度、大笑条的进度都不看 residue。
+    this.smileDimmed = laughingNow || laughCandidate || this.residue > 0
+    const smileIntent = !this.smileDimmed && (this.mode === 'smiling' || this.tSmileEnter > 0)
+    // Laughing 期间必须是 dim，不能写成 charge——否则满格大笑时微笑条亮度不掉。
+    this.smileStatus = this.smileDimmed ? 'dim' : this.mode === 'smiling' ? 'active' : 'charge'
+    this.laughStatus = laughingNow ? 'active' : smileIntent ? 'dim' : 'charge'
+    this.smileAmp = smileBarAmp(this.mode, sig.smile, this.cfg.smileEnter)
     this.smileProgress =
-      this.mode === 'smiling' ? 1 : this.mode === 'laughing' ? 0 : Math.min(1, this.tSmileEnter / HOLD_SMILE_ENTER)
-    this.laughProgress =
-      this.mode === 'laughing' ? 1 : afterglow ? Math.max(this.laughGate(sig), this.residue / RESIDUE_TIME) : this.laughGate(sig)
+      this.mode === 'smiling' ? 1 : laughingNow ? 0 : Math.min(1, this.tSmileEnter / HOLD_SMILE_ENTER)
+    this.laughProgress = this.laughGate(sig)
   }
 
   /**
