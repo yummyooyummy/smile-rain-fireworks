@@ -67,7 +67,7 @@ export class ExpressionState {
   /** 进度条语义：charge = 未触发；active = 已触发；dim = 被另一根条的意图压住 */
   smileStatus: 'charge' | 'active' | 'dim' = 'charge'
   laughStatus: 'charge' | 'active' | 'dim' = 'charge'
-  /** 微笑条弱化：正式 Laughing（含 400ms 退出防抖）、大笑候选、或烟花余韵期。只管透明度，不管幅度。 */
+  /** 微笑条弱化：此刻大笑正在进行（嘴张着且在笑，带 0.6× 退出迟滞）。只管透明度，不管幅度，不等退出防抖。 */
   smileDimmed = false
   private tSmileHold = 0
 
@@ -283,19 +283,18 @@ export class ExpressionState {
     const diff = target - this.rainRate
     this.rainRate += Math.abs(diff) <= speed ? diff : Math.sign(diff) * speed
 
-    // ---- 两根进度条：幅度 / 弱化 / 余韵三条分开 ----
-    // 幅度：当前信号映射（Laughing 时微笑幅度仍为 0，这是已验收约束，不是弱化手段）。
-    // 弱化：只由正式 Laughing（含 400ms 退出防抖）和大笑候选驱动。
-    // 余韵：只发烟花，不改条的幅度或透明度。
+    // ---- 两根进度条：幅度 / 弱化分开 ----
+    // 幅度：当前信号映射（Laughing 时微笑幅度为 0，这是已验收约束，不是弱化手段）。
+    // 弱化（透明度）跟「此刻嘴是不是张着在笑」走，不跟状态机的 400 ms 退出防抖、也不跟烟花余韵：
+    // 大笑一收、嘴一合，微笑条当帧亮回来、大笑条当帧变淡；防抖只管烟花什么时候停，不管条。
+    // 进入方向用大笑阈值、退出方向用退出阈值（0.6×），和状态机同一套迟滞，所以「哈—哈—哈」不会闪。
     const laughingNow = this.mode === 'laughing'
-    const laughCandidate = !laughingNow && this.isLaughing(sig)
-    // 弱化多盖住一段「烟花余韵」（residue，离开 Laughing 后 1.5 s 内烟花还在放）：
-    // 用户看到的是「烟花还在放、微笑条却亮了」。只动透明度——幅度、大笑条的进度都不看 residue。
-    this.smileDimmed = laughingNow || laughCandidate || this.residue > 0
-    const smileIntent = !this.smileDimmed && (this.mode === 'smiling' || this.tSmileEnter > 0)
-    // Laughing 期间必须是 dim，不能写成 charge——否则满格大笑时微笑条亮度不掉。
-    this.smileStatus = this.smileDimmed ? 'dim' : this.mode === 'smiling' ? 'active' : 'charge'
-    this.laughStatus = laughingNow ? 'active' : smileIntent ? 'dim' : 'charge'
+    const laughLive = laughingNow ? sig.jawOpen >= this.laughExitJaw : this.isLaughing(sig)
+    this.smileDimmed = laughLive
+    // 微笑意图：已在微笑、微笑候选计时中、或微笑信号已过进入线（大笑刚收住、计时还没重新起步的那几帧）
+    const smileIntent = !laughLive && (this.mode === 'smiling' || this.tSmileEnter > 0 || sig.smile >= c.smileEnter)
+    this.smileStatus = laughLive ? 'dim' : this.mode === 'smiling' ? 'active' : 'charge'
+    this.laughStatus = laughLive && laughingNow ? 'active' : smileIntent ? 'dim' : 'charge'
     this.smileAmp = smileBarAmp(this.mode, sig.smile, this.cfg.smileEnter)
     this.smileProgress =
       this.mode === 'smiling' ? 1 : laughingNow ? 0 : Math.min(1, this.tSmileEnter / HOLD_SMILE_ENTER)
